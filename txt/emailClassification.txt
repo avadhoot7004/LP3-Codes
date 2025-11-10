@@ -1,0 +1,111 @@
+
+
+Experiment-2 (Group B): Email Classification
+
+    import pandas as pd
+    import numpy as np
+    import seaborn as sns
+    import matplotlib.pyplot as plt
+    from sklearn.model_selection import train_test_split
+    from sklearn.svm import SVC, LinearSVC
+    from sklearn.neighbors import KNeighborsClassifier
+    from sklearn import metrics
+    from sklearn import preprocessing
+    import kagglehub
+    from kagglehub import KaggleDatasetAdapter
+
+    file_path = "emails.csv"
+    df = kagglehub.load_dataset(
+      KaggleDatasetAdapter.PANDAS,
+      "balaka18/email-spam-classification-dataset-csv",
+      file_path
+    )
+
+    /tmp/ipython-input-4090639220.py:2: DeprecationWarning: Use dataset_load() instead of load_dataset(). load_dataset() will be removed in a future version.
+      df = kagglehub.load_dataset(
+
+    Downloading from https://www.kaggle.com/api/v1/datasets/download/balaka18/email-spam-classification-dataset-csv?dataset_version_number=1&file_name=emails.csv...
+
+    100%|██████████| 1.66M/1.66M [00:00<00:00, 98.4MB/s]
+
+    Extracting zip of emails.csv...
+
+    df.info()
+
+    <class 'pandas.core.frame.DataFrame'>
+    RangeIndex: 5172 entries, 0 to 5171
+    Columns: 3002 entries, Email No. to Prediction
+    dtypes: int64(3001), object(1)
+    memory usage: 118.5+ MB
+
+    df.head(1)
+
+    {"type":"dataframe","variable_name":"df"}
+
+    df.dtypes
+
+    Email No.     object
+    the            int64
+    to             int64
+    ect            int64
+    and            int64
+                   ...  
+    military       int64
+    allowing       int64
+    ff             int64
+    dry            int64
+    Prediction     int64
+    Length: 3002, dtype: object
+
+    df.drop(columns=['Email No.'], inplace=True)
+
+    df.isna().sum()
+
+    the           0
+    to            0
+    ect           0
+    and           0
+    for           0
+                 ..
+    military      0
+    allowing      0
+    ff            0
+    dry           0
+    Prediction    0
+    Length: 3001, dtype: int64
+
+    df.describe()
+
+    {"type":"dataframe"}
+
+    df = df.fillna(0)
+
+    X=df.iloc[:, :df.shape[1]-1]
+    #Independent Variables
+    y=df.iloc[:, -1]
+    #Dependent Variable
+    X.shape, y.shape
+
+    ((5172, 3000), (5172,))
+
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.15, random_state=8)
+
+    models = {
+    "K-Nearest Neighbors": KNeighborsClassifier(n_neighbors=2),
+    "Linear SVM":LinearSVC(random_state=8, max_iter=900000),
+    "Polynomical SVM":SVC(kernel="poly", degree=2, random_state=8),
+    "RBF SVM":SVC(kernel="rbf", random_state=8),
+    "Sigmoid SVM":SVC(kernel="sigmoid", random_state=8)
+    }
+
+    for model_name, model in models.items():
+        model.fit(X_train, y_train)
+        y_pred = model.predict(X_test)
+        acc = metrics.accuracy_score(y_test, y_pred)
+        print(f"Accuracy for {model_name} model : {acc:.4f}")
+
+    Accuracy for K-Nearest Neighbors model : 0.8879
+    Accuracy for Linear SVM model : 0.9781
+    Accuracy for Polynomical SVM model : 0.7616
+    Accuracy for RBF SVM model : 0.8183
+    Accuracy for Sigmoid SVM model : 0.6237

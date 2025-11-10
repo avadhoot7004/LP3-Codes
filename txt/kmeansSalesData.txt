@@ -1,0 +1,51 @@
+
+
+Experiment-6 (Group B): K-Means Clustering
+
+    !pip install kagglehub --quiet
+
+    import pandas as pd
+    import numpy as np
+    import seaborn as sns
+    import matplotlib.pyplot as plt
+    import sklearn.cluster as cluster
+    import kagglehub
+    from kagglehub import KaggleDatasetAdapter
+    from kagglehub import dataset_load
+    import pandas as pd
+    from kagglehub import dataset_download
+
+    path = dataset_download("kyanyoga/sample-sales-data")
+
+    df = pd.read_csv(path + "/sales_data_sample.csv", encoding="latin1")
+
+    df.head()
+
+    Using Colab cache for faster access to the 'sample-sales-data' dataset.
+
+    {"type":"dataframe","variable_name":"df"}
+
+    list = ["PRICEEACH", "SALES"]
+    data = df[list]
+    data.head()
+
+    {"summary":"{\n  \"name\": \"data\",\n  \"rows\": 2823,\n  \"fields\": [\n    {\n      \"column\": \"PRICEEACH\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 20.174276527840703,\n        \"min\": 26.88,\n        \"max\": 100.0,\n        \"num_unique_values\": 1016,\n        \"samples\": [\n          81.17,\n          65.13,\n          52.7\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"SALES\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 1841.8651057401805,\n        \"min\": 482.13,\n        \"max\": 14082.8,\n        \"num_unique_values\": 2763,\n        \"samples\": [\n          2140.11,\n          4739.4,\n          2259.72\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    }\n  ]\n}","type":"dataframe","variable_name":"data"}
+
+    K=range(1, 7)
+    wss = []
+    for k in K:
+        kmeans=cluster.KMeans(n_clusters=k,init="k-means++")
+        kmeans=kmeans.fit(data)
+        wss_iter = kmeans.inertia_
+        wss.append(wss_iter)
+
+    mycenters = pd.DataFrame({'Clusters' : K, 'WSS' : wss})
+    mycenters
+
+    {"summary":"{\n  \"name\": \"mycenters\",\n  \"rows\": 6,\n  \"fields\": [\n    {\n      \"column\": \"Clusters\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 1,\n        \"min\": 1,\n        \"max\": 6,\n        \"num_unique_values\": 6,\n        \"samples\": [\n          1,\n          2,\n          6\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"WSS\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 3462948596.356336,\n        \"min\": 517992336.12333184,\n        \"max\": 9574690623.2167,\n        \"num_unique_values\": 6,\n        \"samples\": [\n          9574690623.2167,\n          3322891570.010675,\n          517992336.12333184\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    }\n  ]\n}","type":"dataframe","variable_name":"mycenters"}
+
+    sns.scatterplot(x = 'Clusters', y = 'WSS', data = mycenters)
+
+    <Axes: xlabel='Clusters', ylabel='WSS'>
+
+[]

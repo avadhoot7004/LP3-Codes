@@ -1,0 +1,1519 @@
+::: {.cell .markdown id="2UfWLzdlxXmm"}
+**Experiment-1 (Group B): Uber ride price prediction**
+:::
+
+::: {.cell .code execution_count="27" executionInfo="{\"elapsed\":4,\"status\":\"ok\",\"timestamp\":1762193629420,\"user\":{\"displayName\":\"Avadhoot Ishtake\",\"userId\":\"15344878545858297286\"},\"user_tz\":-330}" id="wDeGFpORvLq7"}
+``` python
+import pandas as pd
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+import pylab
+from sklearn.model_selection import train_test_split
+from sklearn import metrics
+from sklearn.ensemble import RandomForestRegressor
+from sklearn import metrics
+from sklearn import preprocessing
+import kagglehub
+from kagglehub import KaggleDatasetAdapter
+```
+:::
+
+::::::::: {.cell .code execution_count="28" colab="{\"base_uri\":\"https://localhost:8080/\",\"height\":0}" executionInfo="{\"elapsed\":6251,\"status\":\"ok\",\"timestamp\":1762193642705,\"user\":{\"displayName\":\"Avadhoot Ishtake\",\"userId\":\"15344878545858297286\"},\"user_tz\":-330}" id="UYhc4ZmE6m1p" outputId="90fc3f8e-0caa-45d9-eae6-09255ddc30ed"}
+``` python
+file_path = "uber.csv"
+
+# Load the latest version
+df = kagglehub.load_dataset(
+  KaggleDatasetAdapter.PANDAS,
+  "yasserh/uber-fares-dataset",
+  file_path
+)
+
+print("First 5 records:", df.head())
+```
+
+::: {.output .stream .stderr}
+    /tmp/ipython-input-152970683.py:4: DeprecationWarning: Use dataset_load() instead of load_dataset(). load_dataset() will be removed in a future version.
+      df = kagglehub.load_dataset(
+:::
+
+::: {.output .stream .stdout}
+    Downloading from https://www.kaggle.com/api/v1/datasets/download/yasserh/uber-fares-dataset?dataset_version_number=1&file_name=uber.csv...
+:::
+
+::: {.output .stream .stderr}
+    100%|██████████| 7.04M/7.04M [00:00<00:00, 146MB/s]
+:::
+
+::: {.output .stream .stdout}
+    Extracting zip of uber.csv...
+:::
+
+::: {.output .stream .stderr}
+:::
+
+::: {.output .stream .stdout}
+    First 5 records:    Unnamed: 0                            key  fare_amount  \
+    0    24238194    2015-05-07 19:52:06.0000003          7.5   
+    1    27835199    2009-07-17 20:04:56.0000002          7.7   
+    2    44984355   2009-08-24 21:45:00.00000061         12.9   
+    3    25894730    2009-06-26 08:22:21.0000001          5.3   
+    4    17610152  2014-08-28 17:47:00.000000188         16.0   
+
+               pickup_datetime  pickup_longitude  pickup_latitude  \
+    0  2015-05-07 19:52:06 UTC        -73.999817        40.738354   
+    1  2009-07-17 20:04:56 UTC        -73.994355        40.728225   
+    2  2009-08-24 21:45:00 UTC        -74.005043        40.740770   
+    3  2009-06-26 08:22:21 UTC        -73.976124        40.790844   
+    4  2014-08-28 17:47:00 UTC        -73.925023        40.744085   
+
+       dropoff_longitude  dropoff_latitude  passenger_count  
+    0         -73.999512         40.723217                1  
+    1         -73.994710         40.750325                1  
+    2         -73.962565         40.772647                1  
+    3         -73.965316         40.803349                3  
+    4         -73.973082         40.761247                5  
+:::
+:::::::::
+
+:::: {.cell .code execution_count="29" colab="{\"base_uri\":\"https://localhost:8080/\",\"height\":206}" executionInfo="{\"elapsed\":21,\"status\":\"ok\",\"timestamp\":1762193733243,\"user\":{\"displayName\":\"Avadhoot Ishtake\",\"userId\":\"15344878545858297286\"},\"user_tz\":-330}" id="BSzz7Xt17MqA" outputId="91a8006a-4dcc-488c-82b7-c8013c03cf30"}
+``` python
+df.head()
+```
+
+::: {.output .execute_result execution_count="29"}
+``` json
+{"type":"dataframe","variable_name":"df"}
+```
+:::
+::::
+
+:::: {.cell .code execution_count="30" colab="{\"base_uri\":\"https://localhost:8080/\",\"height\":300}" executionInfo="{\"elapsed\":252,\"status\":\"ok\",\"timestamp\":1762193744082,\"user\":{\"displayName\":\"Avadhoot Ishtake\",\"userId\":\"15344878545858297286\"},\"user_tz\":-330}" id="t7Oo5dER7phr" outputId="33862605-7e38-4ef2-f0f2-fbba65914313"}
+``` python
+df.describe()
+```
+
+::: {.output .execute_result execution_count="30"}
+``` json
+{"summary":"{\n  \"name\": \"df\",\n  \"rows\": 8,\n  \"fields\": [\n    {\n      \"column\": \"Unnamed: 0\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 19353275.447618973,\n        \"min\": 1.0,\n        \"max\": 55423567.0,\n        \"num_unique_values\": 8,\n        \"samples\": [\n          27712503.68235,\n          27745495.0,\n          200000.0\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"fare_amount\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 70685.88306171099,\n        \"min\": -52.0,\n        \"max\": 200000.0,\n        \"num_unique_values\": 8,\n        \"samples\": [\n          11.359955250000002,\n          8.5,\n          200000.0\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"pickup_longitude\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 70791.27149688502,\n        \"min\": -1340.64841,\n        \"max\": 200000.0,\n        \"num_unique_values\": 8,\n        \"samples\": [\n          -72.5276379162372,\n          -73.98182299999999,\n          200000.0\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"pickup_latitude\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 70625.08842178025,\n        \"min\": -74.01551500000001,\n        \"max\": 200000.0,\n        \"num_unique_values\": 8,\n        \"samples\": [\n          39.93588537801235,\n          40.752592,\n          200000.0\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"dropoff_longitude\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 70847.64282023361,\n        \"min\": -3356.6663,\n        \"max\": 199999.0,\n        \"num_unique_values\": 8,\n        \"samples\": [\n          -72.52529162747415,\n          -73.98009300000001,\n          199999.0\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"dropoff_latitude\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 70703.81752683062,\n        \"min\": -881.9855130000001,\n        \"max\": 199999.0,\n        \"num_unique_values\": 8,\n        \"samples\": [\n          39.92389040183263,\n          40.753042,\n          199999.0\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"passenger_count\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 70699.85246121645,\n        \"min\": 0.0,\n        \"max\": 200000.0,\n        \"num_unique_values\": 7,\n        \"samples\": [\n          200000.0,\n          1.684535,\n          2.0\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    }\n  ]\n}","type":"dataframe"}
+```
+:::
+::::
+
+:::: {.cell .code execution_count="31" colab="{\"base_uri\":\"https://localhost:8080/\",\"height\":303}" executionInfo="{\"elapsed\":8,\"status\":\"ok\",\"timestamp\":1762193753216,\"user\":{\"displayName\":\"Avadhoot Ishtake\",\"userId\":\"15344878545858297286\"},\"user_tz\":-330}" id="D-DjPzoO7p5r" outputId="612d42fb-4d53-46b2-ee18-d29c6d0a43b5"}
+``` python
+df = df.drop(['Unnamed: 0','key'],axis=1)
+df.isna().sum()
+```
+
+::: {.output .execute_result execution_count="31"}
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>0</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>fare_amount</th>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>pickup_datetime</th>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>pickup_longitude</th>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>pickup_latitude</th>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>dropoff_longitude</th>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>dropoff_latitude</th>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>passenger_count</th>
+      <td>0</td>
+    </tr>
+  </tbody>
+</table>
+</div><br><label><b>dtype:</b> int64</label>
+:::
+::::
+
+:::: {.cell .code execution_count="32" colab="{\"base_uri\":\"https://localhost:8080/\",\"height\":303}" executionInfo="{\"elapsed\":26,\"status\":\"ok\",\"timestamp\":1762193761821,\"user\":{\"displayName\":\"Avadhoot Ishtake\",\"userId\":\"15344878545858297286\"},\"user_tz\":-330}" id="VUC791iV7sLq" outputId="39a70b9f-69a3-4869-bdb6-557075eb14cf"}
+``` python
+df.dropna(axis=0,inplace=True)
+df.dtypes
+```
+
+::: {.output .execute_result execution_count="32"}
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>0</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>fare_amount</th>
+      <td>float64</td>
+    </tr>
+    <tr>
+      <th>pickup_datetime</th>
+      <td>object</td>
+    </tr>
+    <tr>
+      <th>pickup_longitude</th>
+      <td>float64</td>
+    </tr>
+    <tr>
+      <th>pickup_latitude</th>
+      <td>float64</td>
+    </tr>
+    <tr>
+      <th>dropoff_longitude</th>
+      <td>float64</td>
+    </tr>
+    <tr>
+      <th>dropoff_latitude</th>
+      <td>float64</td>
+    </tr>
+    <tr>
+      <th>passenger_count</th>
+      <td>int64</td>
+    </tr>
+  </tbody>
+</table>
+</div><br><label><b>dtype:</b> object</label>
+:::
+::::
+
+::: {.cell .code execution_count="33" executionInfo="{\"elapsed\":3889,\"status\":\"ok\",\"timestamp\":1762193774288,\"user\":{\"displayName\":\"Avadhoot Ishtake\",\"userId\":\"15344878545858297286\"},\"user_tz\":-330}" id="wBGJDOtR7uR1"}
+``` python
+df.pickup_datetime = pd.to_datetime(df.pickup_datetime,errors='coerce')
+```
+:::
+
+:::: {.cell .code execution_count="34" colab="{\"base_uri\":\"https://localhost:8080/\",\"height\":0}" executionInfo="{\"elapsed\":122,\"status\":\"ok\",\"timestamp\":1762193777338,\"user\":{\"displayName\":\"Avadhoot Ishtake\",\"userId\":\"15344878545858297286\"},\"user_tz\":-330}" id="Veuhtza-7wX7" outputId="9d97657e-ed35-4c7e-f8dc-740bee9a9f81"}
+``` python
+df = df.assign(
+    second = df.pickup_datetime.dt.second,
+    minute = df.pickup_datetime.dt.minute,
+    hour = df.pickup_datetime.dt.hour,
+    day = df.pickup_datetime.dt.day,
+    month = df.pickup_datetime.dt.month,
+    year = df.pickup_datetime.dt.year,
+    dayofweek = df.pickup_datetime.dt.dayofweek
+)
+df = df.drop('pickup_datetime',axis=1)
+df.info()
+```
+
+::: {.output .stream .stdout}
+    <class 'pandas.core.frame.DataFrame'>
+    Index: 199999 entries, 0 to 199999
+    Data columns (total 13 columns):
+     #   Column             Non-Null Count   Dtype  
+    ---  ------             --------------   -----  
+     0   fare_amount        199999 non-null  float64
+     1   pickup_longitude   199999 non-null  float64
+     2   pickup_latitude    199999 non-null  float64
+     3   dropoff_longitude  199999 non-null  float64
+     4   dropoff_latitude   199999 non-null  float64
+     5   passenger_count    199999 non-null  int64  
+     6   second             199999 non-null  int32  
+     7   minute             199999 non-null  int32  
+     8   hour               199999 non-null  int32  
+     9   day                199999 non-null  int32  
+     10  month              199999 non-null  int32  
+     11  year               199999 non-null  int32  
+     12  dayofweek          199999 non-null  int32  
+    dtypes: float64(5), int32(7), int64(1)
+    memory usage: 16.0 MB
+:::
+::::
+
+:::: {.cell .code execution_count="35" colab="{\"base_uri\":\"https://localhost:8080/\",\"height\":206}" executionInfo="{\"elapsed\":34,\"status\":\"ok\",\"timestamp\":1762193784755,\"user\":{\"displayName\":\"Avadhoot Ishtake\",\"userId\":\"15344878545858297286\"},\"user_tz\":-330}" id="hZFtIZ8n7yDa" outputId="25222bda-6e24-43ce-9485-cfd888294f98"}
+``` python
+df.head()
+```
+
+::: {.output .execute_result execution_count="35"}
+``` json
+{"type":"dataframe","variable_name":"df"}
+```
+:::
+::::
+
+::: {.cell .code execution_count="36" executionInfo="{\"elapsed\":56,\"status\":\"ok\",\"timestamp\":1762193796685,\"user\":{\"displayName\":\"Avadhoot Ishtake\",\"userId\":\"15344878545858297286\"},\"user_tz\":-330}" id="Dqymp7N67z4q"}
+``` python
+incorrect_coordinates = df.loc[
+    (df.pickup_latitude > 90) | (df.pickup_latitude < -90) |
+    (df.dropoff_latitude > 90) | (df.dropoff_latitude < -90) |
+    (df.pickup_longitude > 180) | (df.pickup_longitude < -180) |
+    (df.dropoff_longitude > 90) | (df.dropoff_longitude < -90)
+]
+
+df.drop(incorrect_coordinates,inplace=True,errors='ignore')
+```
+:::
+
+::: {.cell .code execution_count="37" executionInfo="{\"elapsed\":5,\"status\":\"ok\",\"timestamp\":1762193802997,\"user\":{\"displayName\":\"Avadhoot Ishtake\",\"userId\":\"15344878545858297286\"},\"user_tz\":-330}" id="2dcECG7F72yu"}
+``` python
+def distance_transform(longitude1,latitude1,longitude2,latitude2):
+  long1,lati1,long2,lati2 = map(np.radians,[longitude1,latitude1,longitude2,latitude2])
+  dist_long = long2 - long1
+  dist_lati = lati2 - lati1
+  a = np.sin(dist_lati/2)**2 + np.cos(lati1) * np.cos(lati2) * np.sin(dist_long/2)**2
+  c = 2 * np.arcsin(np.sqrt(a)) * 6371
+  # long1 ,lati1,long2,lati2 = longitude1[pos], latitude1[pos],longitude2[pos],latitude2[pos]
+  # c = sqrt((long2 - long1) ** 2 + (lati2 - lati1) ** 2)asin
+
+  return c
+```
+:::
+
+::: {.cell .code execution_count="38" executionInfo="{\"elapsed\":25,\"status\":\"ok\",\"timestamp\":1762193809329,\"user\":{\"displayName\":\"Avadhoot Ishtake\",\"userId\":\"15344878545858297286\"},\"user_tz\":-330}" id="rRrjV84l74Um"}
+``` python
+df['Distance'] = distance_transform(
+    df['pickup_longitude'],
+    df['pickup_latitude'],
+    df['dropoff_longitude'],
+    df['dropoff_latitude']
+)
+```
+:::
+
+::::: {.cell .code execution_count="39" colab="{\"base_uri\":\"https://localhost:8080/\",\"height\":466}" executionInfo="{\"elapsed\":1674,\"status\":\"ok\",\"timestamp\":1762193819178,\"user\":{\"displayName\":\"Avadhoot Ishtake\",\"userId\":\"15344878545858297286\"},\"user_tz\":-330}" id="M7Gy-L3F754g" outputId="1f6a5529-7572-4782-eadd-5ffdf5d354d8"}
+``` python
+plt.scatter(df['Distance'], df['fare_amount'])
+plt.xlabel("Distance")
+plt.ylabel('fare_amount')
+```
+
+::: {.output .execute_result execution_count="39"}
+    Text(0, 0.5, 'fare_amount')
+:::
+
+::: {.output .display_data}
+![](c97bee6639f5905f41746df6ce212f8964c3daa2.png)
+:::
+:::::
+
+::::: {.cell .code execution_count="40" colab="{\"base_uri\":\"https://localhost:8080/\",\"height\":869}" executionInfo="{\"elapsed\":16335,\"status\":\"ok\",\"timestamp\":1762193846970,\"user\":{\"displayName\":\"Avadhoot Ishtake\",\"userId\":\"15344878545858297286\"},\"user_tz\":-330}" id="3esUofVk774S" outputId="d1e2a203-72d5-4532-e516-73dcfd74d8a5"}
+``` python
+plt.figure(figsize=(20,12))
+sns.boxplot(data=df)
+```
+
+::: {.output .execute_result execution_count="40"}
+    <Axes: >
+:::
+
+::: {.output .display_data}
+![](078283c28559e3935da148bb0a8b9bb3d49a9002.png)
+:::
+:::::
+
+::: {.cell .code execution_count="41" executionInfo="{\"elapsed\":48,\"status\":\"ok\",\"timestamp\":1762193847030,\"user\":{\"displayName\":\"Avadhoot Ishtake\",\"userId\":\"15344878545858297286\"},\"user_tz\":-330}" id="Tf7V0PKk7_FO"}
+``` python
+df.drop(df[df['Distance'] >= 60].index , inplace=True)
+df.drop(df[df['fare_amount'] <= 0].index , inplace=True)
+
+df.drop(df[(df['fare_amount']>100) & (df['Distance']<1)].index, inplace=True)
+df.drop(df[(df['fare_amount']<100) & (df['Distance']>100)].index, inplace=True)
+```
+:::
+
+::::: {.cell .code execution_count="42" colab="{\"base_uri\":\"https://localhost:8080/\",\"height\":466}" executionInfo="{\"elapsed\":2777,\"status\":\"ok\",\"timestamp\":1762193854604,\"user\":{\"displayName\":\"Avadhoot Ishtake\",\"userId\":\"15344878545858297286\"},\"user_tz\":-330}" id="elkCl_b68BWm" outputId="690d5e0b-c1f6-4b36-d569-dd56bd9151a0"}
+``` python
+plt.scatter(df['Distance'], df['fare_amount'])
+plt.xlabel("Distance")
+plt.ylabel('fare_amount')
+```
+
+::: {.output .execute_result execution_count="42"}
+    Text(0, 0.5, 'fare_amount')
+:::
+
+::: {.output .display_data}
+![](38ed0404735e71d547ee84b37c5ab49312801e37.png)
+:::
+:::::
+
+:::: {.cell .code execution_count="44" colab="{\"base_uri\":\"https://localhost:8080/\",\"height\":508}" executionInfo="{\"elapsed\":232,\"status\":\"ok\",\"timestamp\":1762193873954,\"user\":{\"displayName\":\"Avadhoot Ishtake\",\"userId\":\"15344878545858297286\"},\"user_tz\":-330}" id="Nj5hLsVR8EQf" outputId="7aa6c220-39da-4b0e-f971-c455b0335369"}
+``` python
+corr = df.corr()
+
+corr.style.background_gradient(cmap='RdBu')
+```
+
+::: {.output .execute_result execution_count="44"}
+<style type="text/css">
+#T_e1fd6_row0_col0, #T_e1fd6_row1_col1, #T_e1fd6_row1_col3, #T_e1fd6_row2_col2, #T_e1fd6_row3_col1, #T_e1fd6_row3_col3, #T_e1fd6_row4_col4, #T_e1fd6_row5_col5, #T_e1fd6_row6_col6, #T_e1fd6_row7_col7, #T_e1fd6_row8_col8, #T_e1fd6_row9_col9, #T_e1fd6_row10_col10, #T_e1fd6_row11_col11, #T_e1fd6_row12_col12, #T_e1fd6_row13_col13 {
+  background-color: #053061;
+  color: #f1f1f1;
+}
+#T_e1fd6_row0_col1, #T_e1fd6_row0_col3, #T_e1fd6_row7_col1, #T_e1fd6_row7_col3, #T_e1fd6_row8_col1, #T_e1fd6_row8_col3, #T_e1fd6_row9_col1, #T_e1fd6_row9_col3, #T_e1fd6_row10_col4, #T_e1fd6_row11_col1, #T_e1fd6_row11_col3, #T_e1fd6_row12_col1, #T_e1fd6_row12_col3 {
+  background-color: #f7f6f6;
+  color: #000000;
+}
+#T_e1fd6_row0_col2, #T_e1fd6_row7_col2, #T_e1fd6_row9_col2, #T_e1fd6_row9_col4, #T_e1fd6_row11_col2, #T_e1fd6_row11_col4, #T_e1fd6_row12_col2 {
+  background-color: #f8f4f2;
+  color: #000000;
+}
+#T_e1fd6_row0_col4, #T_e1fd6_row5_col1, #T_e1fd6_row5_col2, #T_e1fd6_row5_col3, #T_e1fd6_row5_col4, #T_e1fd6_row7_col4, #T_e1fd6_row8_col2, #T_e1fd6_row8_col4, #T_e1fd6_row10_col1, #T_e1fd6_row10_col2, #T_e1fd6_row10_col3, #T_e1fd6_row12_col4 {
+  background-color: #f7f5f4;
+  color: #000000;
+}
+#T_e1fd6_row0_col5, #T_e1fd6_row6_col11, #T_e1fd6_row10_col5 {
+  background-color: #ce4f45;
+  color: #f1f1f1;
+}
+#T_e1fd6_row0_col6, #T_e1fd6_row2_col5, #T_e1fd6_row4_col5, #T_e1fd6_row9_col6 {
+  background-color: #c94741;
+  color: #f1f1f1;
+}
+#T_e1fd6_row0_col7, #T_e1fd6_row1_col2, #T_e1fd6_row1_col4, #T_e1fd6_row1_col13, #T_e1fd6_row3_col2, #T_e1fd6_row3_col4, #T_e1fd6_row3_col13, #T_e1fd6_row4_col1, #T_e1fd6_row4_col3, #T_e1fd6_row5_col6, #T_e1fd6_row6_col5, #T_e1fd6_row8_col0, #T_e1fd6_row8_col12, #T_e1fd6_row10_col9, #T_e1fd6_row10_col11, #T_e1fd6_row11_col10, #T_e1fd6_row12_col8, #T_e1fd6_row13_col7 {
+  background-color: #67001f;
+  color: #f1f1f1;
+}
+#T_e1fd6_row0_col8, #T_e1fd6_row6_col10 {
+  background-color: #930e26;
+  color: #f1f1f1;
+}
+#T_e1fd6_row0_col9, #T_e1fd6_row6_col0, #T_e1fd6_row7_col9, #T_e1fd6_row13_col9 {
+  background-color: #730421;
+  color: #f1f1f1;
+}
+#T_e1fd6_row0_col10, #T_e1fd6_row10_col6 {
+  background-color: #bb2a34;
+  color: #f1f1f1;
+}
+#T_e1fd6_row0_col11 {
+  background-color: #da6853;
+  color: #f1f1f1;
+}
+#T_e1fd6_row0_col12, #T_e1fd6_row1_col12, #T_e1fd6_row3_col12, #T_e1fd6_row9_col8, #T_e1fd6_row9_col12, #T_e1fd6_row11_col12 {
+  background-color: #a51429;
+  color: #f1f1f1;
+}
+#T_e1fd6_row0_col13 {
+  background-color: #2a71b2;
+  color: #f1f1f1;
+}
+#T_e1fd6_row1_col0, #T_e1fd6_row3_col0, #T_e1fd6_row12_col0 {
+  background-color: #790622;
+  color: #f1f1f1;
+}
+#T_e1fd6_row1_col5, #T_e1fd6_row3_col5, #T_e1fd6_row7_col5, #T_e1fd6_row7_col6, #T_e1fd6_row9_col5, #T_e1fd6_row12_col6, #T_e1fd6_row13_col6 {
+  background-color: #cb4942;
+  color: #f1f1f1;
+}
+#T_e1fd6_row1_col6, #T_e1fd6_row3_col6, #T_e1fd6_row8_col6 {
+  background-color: #c6413e;
+  color: #f1f1f1;
+}
+#T_e1fd6_row1_col7, #T_e1fd6_row2_col9, #T_e1fd6_row3_col7, #T_e1fd6_row4_col9, #T_e1fd6_row5_col7, #T_e1fd6_row6_col7, #T_e1fd6_row8_col7 {
+  background-color: #6d0220;
+  color: #f1f1f1;
+}
+#T_e1fd6_row1_col8, #T_e1fd6_row2_col8, #T_e1fd6_row3_col8, #T_e1fd6_row4_col8, #T_e1fd6_row6_col12, #T_e1fd6_row7_col8, #T_e1fd6_row11_col8 {
+  background-color: #a21328;
+  color: #f1f1f1;
+}
+#T_e1fd6_row1_col9, #T_e1fd6_row3_col9, #T_e1fd6_row5_col9, #T_e1fd6_row8_col9, #T_e1fd6_row9_col0, #T_e1fd6_row12_col9 {
+  background-color: #760521;
+  color: #f1f1f1;
+}
+#T_e1fd6_row1_col10, #T_e1fd6_row3_col10, #T_e1fd6_row7_col11, #T_e1fd6_row7_col13, #T_e1fd6_row8_col10 {
+  background-color: #b1182b;
+  color: #f1f1f1;
+}
+#T_e1fd6_row1_col11, #T_e1fd6_row2_col10, #T_e1fd6_row3_col11, #T_e1fd6_row4_col10, #T_e1fd6_row5_col11, #T_e1fd6_row8_col11, #T_e1fd6_row12_col11 {
+  background-color: #b41c2d;
+  color: #f1f1f1;
+}
+#T_e1fd6_row2_col0, #T_e1fd6_row4_col0, #T_e1fd6_row6_col9, #T_e1fd6_row7_col0 {
+  background-color: #700320;
+  color: #f1f1f1;
+}
+#T_e1fd6_row2_col1, #T_e1fd6_row2_col3, #T_e1fd6_row2_col7, #T_e1fd6_row4_col7, #T_e1fd6_row9_col7, #T_e1fd6_row10_col7, #T_e1fd6_row11_col7, #T_e1fd6_row11_col9, #T_e1fd6_row12_col7 {
+  background-color: #6a011f;
+  color: #f1f1f1;
+}
+#T_e1fd6_row2_col4, #T_e1fd6_row4_col2 {
+  background-color: #063264;
+  color: #f1f1f1;
+}
+#T_e1fd6_row2_col6, #T_e1fd6_row4_col6, #T_e1fd6_row8_col5 {
+  background-color: #cf5246;
+  color: #f1f1f1;
+}
+#T_e1fd6_row2_col11, #T_e1fd6_row4_col11, #T_e1fd6_row12_col10, #T_e1fd6_row13_col12 {
+  background-color: #ae172a;
+  color: #f1f1f1;
+}
+#T_e1fd6_row2_col12, #T_e1fd6_row4_col12, #T_e1fd6_row7_col12, #T_e1fd6_row8_col13, #T_e1fd6_row10_col8 {
+  background-color: #9f1228;
+  color: #f1f1f1;
+}
+#T_e1fd6_row2_col13 {
+  background-color: #d7634f;
+  color: #f1f1f1;
+}
+#T_e1fd6_row4_col13 {
+  background-color: #d6604d;
+  color: #f1f1f1;
+}
+#T_e1fd6_row5_col0 {
+  background-color: #7f0823;
+  color: #f1f1f1;
+}
+#T_e1fd6_row5_col8, #T_e1fd6_row9_col11 {
+  background-color: #ab162a;
+  color: #f1f1f1;
+}
+#T_e1fd6_row5_col10, #T_e1fd6_row5_col12, #T_e1fd6_row5_col13 {
+  background-color: #b61f2e;
+  color: #f1f1f1;
+}
+#T_e1fd6_row6_col1, #T_e1fd6_row6_col3 {
+  background-color: #f8f3f0;
+  color: #000000;
+}
+#T_e1fd6_row6_col2 {
+  background-color: #f6f7f7;
+  color: #000000;
+}
+#T_e1fd6_row6_col4 {
+  background-color: #f5f6f7;
+  color: #000000;
+}
+#T_e1fd6_row6_col8 {
+  background-color: #991027;
+  color: #f1f1f1;
+}
+#T_e1fd6_row6_col13, #T_e1fd6_row7_col10, #T_e1fd6_row9_col13 {
+  background-color: #b3192c;
+  color: #f1f1f1;
+}
+#T_e1fd6_row9_col10 {
+  background-color: #a81529;
+  color: #f1f1f1;
+}
+#T_e1fd6_row10_col0 {
+  background-color: #870a24;
+  color: #f1f1f1;
+}
+#T_e1fd6_row10_col12 {
+  background-color: #9c1127;
+  color: #f1f1f1;
+}
+#T_e1fd6_row10_col13, #T_e1fd6_row13_col10 {
+  background-color: #b72230;
+  color: #f1f1f1;
+}
+#T_e1fd6_row11_col0 {
+  background-color: #bf3338;
+  color: #f1f1f1;
+}
+#T_e1fd6_row11_col5, #T_e1fd6_row13_col5 {
+  background-color: #cc4c44;
+  color: #f1f1f1;
+}
+#T_e1fd6_row11_col6 {
+  background-color: #e17860;
+  color: #f1f1f1;
+}
+#T_e1fd6_row11_col13, #T_e1fd6_row13_col11 {
+  background-color: #bd2d35;
+  color: #f1f1f1;
+}
+#T_e1fd6_row12_col5 {
+  background-color: #d55d4c;
+  color: #f1f1f1;
+}
+#T_e1fd6_row12_col13 {
+  background-color: #b82531;
+  color: #f1f1f1;
+}
+#T_e1fd6_row13_col0 {
+  background-color: #2e77b5;
+  color: #f1f1f1;
+}
+#T_e1fd6_row13_col1, #T_e1fd6_row13_col3 {
+  background-color: #fbe5d8;
+  color: #000000;
+}
+#T_e1fd6_row13_col2, #T_e1fd6_row13_col4 {
+  background-color: #e4eef4;
+  color: #000000;
+}
+#T_e1fd6_row13_col8 {
+  background-color: #8a0b25;
+  color: #f1f1f1;
+}
+</style>
+<table id="T_e1fd6" class="dataframe">
+  <thead>
+    <tr>
+      <th class="blank level0" >&nbsp;</th>
+      <th id="T_e1fd6_level0_col0" class="col_heading level0 col0" >fare_amount</th>
+      <th id="T_e1fd6_level0_col1" class="col_heading level0 col1" >pickup_longitude</th>
+      <th id="T_e1fd6_level0_col2" class="col_heading level0 col2" >pickup_latitude</th>
+      <th id="T_e1fd6_level0_col3" class="col_heading level0 col3" >dropoff_longitude</th>
+      <th id="T_e1fd6_level0_col4" class="col_heading level0 col4" >dropoff_latitude</th>
+      <th id="T_e1fd6_level0_col5" class="col_heading level0 col5" >passenger_count</th>
+      <th id="T_e1fd6_level0_col6" class="col_heading level0 col6" >second</th>
+      <th id="T_e1fd6_level0_col7" class="col_heading level0 col7" >minute</th>
+      <th id="T_e1fd6_level0_col8" class="col_heading level0 col8" >hour</th>
+      <th id="T_e1fd6_level0_col9" class="col_heading level0 col9" >day</th>
+      <th id="T_e1fd6_level0_col10" class="col_heading level0 col10" >month</th>
+      <th id="T_e1fd6_level0_col11" class="col_heading level0 col11" >year</th>
+      <th id="T_e1fd6_level0_col12" class="col_heading level0 col12" >dayofweek</th>
+      <th id="T_e1fd6_level0_col13" class="col_heading level0 col13" >Distance</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th id="T_e1fd6_level0_row0" class="row_heading level0 row0" >fare_amount</th>
+      <td id="T_e1fd6_row0_col0" class="data row0 col0" >1.000000</td>
+      <td id="T_e1fd6_row0_col1" class="data row0 col1" >0.005885</td>
+      <td id="T_e1fd6_row0_col2" class="data row0 col2" >-0.006253</td>
+      <td id="T_e1fd6_row0_col3" class="data row0 col3" >0.005501</td>
+      <td id="T_e1fd6_row0_col4" class="data row0 col4" >-0.006142</td>
+      <td id="T_e1fd6_row0_col5" class="data row0 col5" >0.011693</td>
+      <td id="T_e1fd6_row0_col6" class="data row0 col6" >-0.000995</td>
+      <td id="T_e1fd6_row0_col7" class="data row0 col7" >-0.007795</td>
+      <td id="T_e1fd6_row0_col8" class="data row0 col8" >-0.020692</td>
+      <td id="T_e1fd6_row0_col9" class="data row0 col9" >0.001059</td>
+      <td id="T_e1fd6_row0_col10" class="data row0 col10" >0.023759</td>
+      <td id="T_e1fd6_row0_col11" class="data row0 col11" >0.121195</td>
+      <td id="T_e1fd6_row0_col12" class="data row0 col12" >0.006181</td>
+      <td id="T_e1fd6_row0_col13" class="data row0 col13" >0.857729</td>
+    </tr>
+    <tr>
+      <th id="T_e1fd6_level0_row1" class="row_heading level0 row1" >pickup_longitude</th>
+      <td id="T_e1fd6_row1_col0" class="data row1 col0" >0.005885</td>
+      <td id="T_e1fd6_row1_col1" class="data row1 col1" >1.000000</td>
+      <td id="T_e1fd6_row1_col2" class="data row1 col2" >-0.973204</td>
+      <td id="T_e1fd6_row1_col3" class="data row1 col3" >0.999992</td>
+      <td id="T_e1fd6_row1_col4" class="data row1 col4" >-0.981941</td>
+      <td id="T_e1fd6_row1_col5" class="data row1 col5" >-0.000649</td>
+      <td id="T_e1fd6_row1_col6" class="data row1 col6" >-0.014677</td>
+      <td id="T_e1fd6_row1_col7" class="data row1 col7" >0.002796</td>
+      <td id="T_e1fd6_row1_col8" class="data row1 col8" >0.001547</td>
+      <td id="T_e1fd6_row1_col9" class="data row1 col9" >0.005300</td>
+      <td id="T_e1fd6_row1_col10" class="data row1 col10" >-0.002667</td>
+      <td id="T_e1fd6_row1_col11" class="data row1 col11" >0.005907</td>
+      <td id="T_e1fd6_row1_col12" class="data row1 col12" >0.003006</td>
+      <td id="T_e1fd6_row1_col13" class="data row1 col13" >-0.117044</td>
+    </tr>
+    <tr>
+      <th id="T_e1fd6_level0_row2" class="row_heading level0 row2" >pickup_latitude</th>
+      <td id="T_e1fd6_row2_col0" class="data row2 col0" >-0.006253</td>
+      <td id="T_e1fd6_row2_col1" class="data row2 col1" >-0.973204</td>
+      <td id="T_e1fd6_row2_col2" class="data row2 col2" >1.000000</td>
+      <td id="T_e1fd6_row2_col3" class="data row2 col3" >-0.973206</td>
+      <td id="T_e1fd6_row2_col4" class="data row2 col4" >0.991076</td>
+      <td id="T_e1fd6_row2_col5" class="data row2 col5" >-0.001190</td>
+      <td id="T_e1fd6_row2_col6" class="data row2 col6" >0.016809</td>
+      <td id="T_e1fd6_row2_col7" class="data row2 col7" >-0.002295</td>
+      <td id="T_e1fd6_row2_col8" class="data row2 col8" >-0.001823</td>
+      <td id="T_e1fd6_row2_col9" class="data row2 col9" >-0.008901</td>
+      <td id="T_e1fd6_row2_col10" class="data row2 col10" >0.004098</td>
+      <td id="T_e1fd6_row2_col11" class="data row2 col11" >-0.008466</td>
+      <td id="T_e1fd6_row2_col12" class="data row2 col12" >-0.004787</td>
+      <td id="T_e1fd6_row2_col13" class="data row2 col13" >0.110843</td>
+    </tr>
+    <tr>
+      <th id="T_e1fd6_level0_row3" class="row_heading level0 row3" >dropoff_longitude</th>
+      <td id="T_e1fd6_row3_col0" class="data row3 col0" >0.005501</td>
+      <td id="T_e1fd6_row3_col1" class="data row3 col1" >0.999992</td>
+      <td id="T_e1fd6_row3_col2" class="data row3 col2" >-0.973206</td>
+      <td id="T_e1fd6_row3_col3" class="data row3 col3" >1.000000</td>
+      <td id="T_e1fd6_row3_col4" class="data row3 col4" >-0.981942</td>
+      <td id="T_e1fd6_row3_col5" class="data row3 col5" >-0.000650</td>
+      <td id="T_e1fd6_row3_col6" class="data row3 col6" >-0.014638</td>
+      <td id="T_e1fd6_row3_col7" class="data row3 col7" >0.002803</td>
+      <td id="T_e1fd6_row3_col8" class="data row3 col8" >0.001316</td>
+      <td id="T_e1fd6_row3_col9" class="data row3 col9" >0.005307</td>
+      <td id="T_e1fd6_row3_col10" class="data row3 col10" >-0.002656</td>
+      <td id="T_e1fd6_row3_col11" class="data row3 col11" >0.005878</td>
+      <td id="T_e1fd6_row3_col12" class="data row3 col12" >0.003082</td>
+      <td id="T_e1fd6_row3_col13" class="data row3 col13" >-0.117282</td>
+    </tr>
+    <tr>
+      <th id="T_e1fd6_level0_row4" class="row_heading level0 row4" >dropoff_latitude</th>
+      <td id="T_e1fd6_row4_col0" class="data row4 col0" >-0.006142</td>
+      <td id="T_e1fd6_row4_col1" class="data row4 col1" >-0.981941</td>
+      <td id="T_e1fd6_row4_col2" class="data row4 col2" >0.991076</td>
+      <td id="T_e1fd6_row4_col3" class="data row4 col3" >-0.981942</td>
+      <td id="T_e1fd6_row4_col4" class="data row4 col4" >1.000000</td>
+      <td id="T_e1fd6_row4_col5" class="data row4 col5" >-0.001035</td>
+      <td id="T_e1fd6_row4_col6" class="data row4 col6" >0.017202</td>
+      <td id="T_e1fd6_row4_col7" class="data row4 col7" >-0.002593</td>
+      <td id="T_e1fd6_row4_col8" class="data row4 col8" >-0.001460</td>
+      <td id="T_e1fd6_row4_col9" class="data row4 col9" >-0.008900</td>
+      <td id="T_e1fd6_row4_col10" class="data row4 col10" >0.004143</td>
+      <td id="T_e1fd6_row4_col11" class="data row4 col11" >-0.008553</td>
+      <td id="T_e1fd6_row4_col12" class="data row4 col12" >-0.004648</td>
+      <td id="T_e1fd6_row4_col13" class="data row4 col13" >0.109486</td>
+    </tr>
+    <tr>
+      <th id="T_e1fd6_level0_row5" class="row_heading level0 row5" >passenger_count</th>
+      <td id="T_e1fd6_row5_col0" class="data row5 col0" >0.011693</td>
+      <td id="T_e1fd6_row5_col1" class="data row5 col1" >-0.000649</td>
+      <td id="T_e1fd6_row5_col2" class="data row5 col2" >-0.001190</td>
+      <td id="T_e1fd6_row5_col3" class="data row5 col3" >-0.000650</td>
+      <td id="T_e1fd6_row5_col4" class="data row5 col4" >-0.001035</td>
+      <td id="T_e1fd6_row5_col5" class="data row5 col5" >1.000000</td>
+      <td id="T_e1fd6_row5_col6" class="data row5 col6" >-0.202987</td>
+      <td id="T_e1fd6_row5_col7" class="data row5 col7" >0.000733</td>
+      <td id="T_e1fd6_row5_col8" class="data row5 col8" >0.013226</td>
+      <td id="T_e1fd6_row5_col9" class="data row5 col9" >0.003146</td>
+      <td id="T_e1fd6_row5_col10" class="data row5 col10" >0.009921</td>
+      <td id="T_e1fd6_row5_col11" class="data row5 col11" >0.004841</td>
+      <td id="T_e1fd6_row5_col12" class="data row5 col12" >0.033360</td>
+      <td id="T_e1fd6_row5_col13" class="data row5 col13" >0.007784</td>
+    </tr>
+    <tr>
+      <th id="T_e1fd6_level0_row6" class="row_heading level0 row6" >second</th>
+      <td id="T_e1fd6_row6_col0" class="data row6 col0" >-0.000995</td>
+      <td id="T_e1fd6_row6_col1" class="data row6 col1" >-0.014677</td>
+      <td id="T_e1fd6_row6_col2" class="data row6 col2" >0.016809</td>
+      <td id="T_e1fd6_row6_col3" class="data row6 col3" >-0.014638</td>
+      <td id="T_e1fd6_row6_col4" class="data row6 col4" >0.017202</td>
+      <td id="T_e1fd6_row6_col5" class="data row6 col5" >-0.202987</td>
+      <td id="T_e1fd6_row6_col6" class="data row6 col6" >1.000000</td>
+      <td id="T_e1fd6_row6_col7" class="data row6 col7" >0.001893</td>
+      <td id="T_e1fd6_row6_col8" class="data row6 col8" >-0.013419</td>
+      <td id="T_e1fd6_row6_col9" class="data row6 col9" >-0.002100</td>
+      <td id="T_e1fd6_row6_col10" class="data row6 col10" >-0.049734</td>
+      <td id="T_e1fd6_row6_col11" class="data row6 col11" >0.083106</td>
+      <td id="T_e1fd6_row6_col12" class="data row6 col12" >-0.000113</td>
+      <td id="T_e1fd6_row6_col13" class="data row6 col13" >-0.000350</td>
+    </tr>
+    <tr>
+      <th id="T_e1fd6_level0_row7" class="row_heading level0 row7" >minute</th>
+      <td id="T_e1fd6_row7_col0" class="data row7 col0" >-0.007795</td>
+      <td id="T_e1fd6_row7_col1" class="data row7 col1" >0.002796</td>
+      <td id="T_e1fd6_row7_col2" class="data row7 col2" >-0.002295</td>
+      <td id="T_e1fd6_row7_col3" class="data row7 col3" >0.002803</td>
+      <td id="T_e1fd6_row7_col4" class="data row7 col4" >-0.002593</td>
+      <td id="T_e1fd6_row7_col5" class="data row7 col5" >0.000733</td>
+      <td id="T_e1fd6_row7_col6" class="data row7 col6" >0.001893</td>
+      <td id="T_e1fd6_row7_col7" class="data row7 col7" >1.000000</td>
+      <td id="T_e1fd6_row7_col8" class="data row7 col8" >0.001352</td>
+      <td id="T_e1fd6_row7_col9" class="data row7 col9" >-0.001255</td>
+      <td id="T_e1fd6_row7_col10" class="data row7 col10" >-0.001606</td>
+      <td id="T_e1fd6_row7_col11" class="data row7 col11" >-0.002687</td>
+      <td id="T_e1fd6_row7_col12" class="data row7 col12" >-0.002405</td>
+      <td id="T_e1fd6_row7_col13" class="data row7 col13" >-0.007998</td>
+    </tr>
+    <tr>
+      <th id="T_e1fd6_level0_row8" class="row_heading level0 row8" >hour</th>
+      <td id="T_e1fd6_row8_col0" class="data row8 col0" >-0.020692</td>
+      <td id="T_e1fd6_row8_col1" class="data row8 col1" >0.001547</td>
+      <td id="T_e1fd6_row8_col2" class="data row8 col2" >-0.001823</td>
+      <td id="T_e1fd6_row8_col3" class="data row8 col3" >0.001316</td>
+      <td id="T_e1fd6_row8_col4" class="data row8 col4" >-0.001460</td>
+      <td id="T_e1fd6_row8_col5" class="data row8 col5" >0.013226</td>
+      <td id="T_e1fd6_row8_col6" class="data row8 col6" >-0.013419</td>
+      <td id="T_e1fd6_row8_col7" class="data row8 col7" >0.001352</td>
+      <td id="T_e1fd6_row8_col8" class="data row8 col8" >1.000000</td>
+      <td id="T_e1fd6_row8_col9" class="data row8 col9" >0.004849</td>
+      <td id="T_e1fd6_row8_col10" class="data row8 col10" >-0.003989</td>
+      <td id="T_e1fd6_row8_col11" class="data row8 col11" >0.002171</td>
+      <td id="T_e1fd6_row8_col12" class="data row8 col12" >-0.086995</td>
+      <td id="T_e1fd6_row8_col13" class="data row8 col13" >-0.031855</td>
+    </tr>
+    <tr>
+      <th id="T_e1fd6_level0_row9" class="row_heading level0 row9" >day</th>
+      <td id="T_e1fd6_row9_col0" class="data row9 col0" >0.001059</td>
+      <td id="T_e1fd6_row9_col1" class="data row9 col1" >0.005300</td>
+      <td id="T_e1fd6_row9_col2" class="data row9 col2" >-0.008901</td>
+      <td id="T_e1fd6_row9_col3" class="data row9 col3" >0.005307</td>
+      <td id="T_e1fd6_row9_col4" class="data row9 col4" >-0.008900</td>
+      <td id="T_e1fd6_row9_col5" class="data row9 col5" >0.003146</td>
+      <td id="T_e1fd6_row9_col6" class="data row9 col6" >-0.002100</td>
+      <td id="T_e1fd6_row9_col7" class="data row9 col7" >-0.001255</td>
+      <td id="T_e1fd6_row9_col8" class="data row9 col8" >0.004849</td>
+      <td id="T_e1fd6_row9_col9" class="data row9 col9" >1.000000</td>
+      <td id="T_e1fd6_row9_col10" class="data row9 col10" >-0.017330</td>
+      <td id="T_e1fd6_row9_col11" class="data row9 col11" >-0.012055</td>
+      <td id="T_e1fd6_row9_col12" class="data row9 col12" >0.005559</td>
+      <td id="T_e1fd6_row9_col13" class="data row9 col13" >0.000008</td>
+    </tr>
+    <tr>
+      <th id="T_e1fd6_level0_row10" class="row_heading level0 row10" >month</th>
+      <td id="T_e1fd6_row10_col0" class="data row10 col0" >0.023759</td>
+      <td id="T_e1fd6_row10_col1" class="data row10 col1" >-0.002667</td>
+      <td id="T_e1fd6_row10_col2" class="data row10 col2" >0.004098</td>
+      <td id="T_e1fd6_row10_col3" class="data row10 col3" >-0.002656</td>
+      <td id="T_e1fd6_row10_col4" class="data row10 col4" >0.004143</td>
+      <td id="T_e1fd6_row10_col5" class="data row10 col5" >0.009921</td>
+      <td id="T_e1fd6_row10_col6" class="data row10 col6" >-0.049734</td>
+      <td id="T_e1fd6_row10_col7" class="data row10 col7" >-0.001606</td>
+      <td id="T_e1fd6_row10_col8" class="data row10 col8" >-0.003989</td>
+      <td id="T_e1fd6_row10_col9" class="data row10 col9" >-0.017330</td>
+      <td id="T_e1fd6_row10_col10" class="data row10 col10" >1.000000</td>
+      <td id="T_e1fd6_row10_col11" class="data row10 col11" >-0.115940</td>
+      <td id="T_e1fd6_row10_col12" class="data row10 col12" >-0.008799</td>
+      <td id="T_e1fd6_row10_col13" class="data row10 col13" >0.011622</td>
+    </tr>
+    <tr>
+      <th id="T_e1fd6_level0_row11" class="row_heading level0 row11" >year</th>
+      <td id="T_e1fd6_row11_col0" class="data row11 col0" >0.121195</td>
+      <td id="T_e1fd6_row11_col1" class="data row11 col1" >0.005907</td>
+      <td id="T_e1fd6_row11_col2" class="data row11 col2" >-0.008466</td>
+      <td id="T_e1fd6_row11_col3" class="data row11 col3" >0.005878</td>
+      <td id="T_e1fd6_row11_col4" class="data row11 col4" >-0.008553</td>
+      <td id="T_e1fd6_row11_col5" class="data row11 col5" >0.004841</td>
+      <td id="T_e1fd6_row11_col6" class="data row11 col6" >0.083106</td>
+      <td id="T_e1fd6_row11_col7" class="data row11 col7" >-0.002687</td>
+      <td id="T_e1fd6_row11_col8" class="data row11 col8" >0.002171</td>
+      <td id="T_e1fd6_row11_col9" class="data row11 col9" >-0.012055</td>
+      <td id="T_e1fd6_row11_col10" class="data row11 col10" >-0.115940</td>
+      <td id="T_e1fd6_row11_col11" class="data row11 col11" >1.000000</td>
+      <td id="T_e1fd6_row11_col12" class="data row11 col12" >0.006007</td>
+      <td id="T_e1fd6_row11_col13" class="data row11 col13" >0.028619</td>
+    </tr>
+    <tr>
+      <th id="T_e1fd6_level0_row12" class="row_heading level0 row12" >dayofweek</th>
+      <td id="T_e1fd6_row12_col0" class="data row12 col0" >0.006181</td>
+      <td id="T_e1fd6_row12_col1" class="data row12 col1" >0.003006</td>
+      <td id="T_e1fd6_row12_col2" class="data row12 col2" >-0.004787</td>
+      <td id="T_e1fd6_row12_col3" class="data row12 col3" >0.003082</td>
+      <td id="T_e1fd6_row12_col4" class="data row12 col4" >-0.004648</td>
+      <td id="T_e1fd6_row12_col5" class="data row12 col5" >0.033360</td>
+      <td id="T_e1fd6_row12_col6" class="data row12 col6" >-0.000113</td>
+      <td id="T_e1fd6_row12_col7" class="data row12 col7" >-0.002405</td>
+      <td id="T_e1fd6_row12_col8" class="data row12 col8" >-0.086995</td>
+      <td id="T_e1fd6_row12_col9" class="data row12 col9" >0.005559</td>
+      <td id="T_e1fd6_row12_col10" class="data row12 col10" >-0.008799</td>
+      <td id="T_e1fd6_row12_col11" class="data row12 col11" >0.006007</td>
+      <td id="T_e1fd6_row12_col12" class="data row12 col12" >1.000000</td>
+      <td id="T_e1fd6_row12_col13" class="data row12 col13" >0.016905</td>
+    </tr>
+    <tr>
+      <th id="T_e1fd6_level0_row13" class="row_heading level0 row13" >Distance</th>
+      <td id="T_e1fd6_row13_col0" class="data row13 col0" >0.857729</td>
+      <td id="T_e1fd6_row13_col1" class="data row13 col1" >-0.117044</td>
+      <td id="T_e1fd6_row13_col2" class="data row13 col2" >0.110843</td>
+      <td id="T_e1fd6_row13_col3" class="data row13 col3" >-0.117282</td>
+      <td id="T_e1fd6_row13_col4" class="data row13 col4" >0.109486</td>
+      <td id="T_e1fd6_row13_col5" class="data row13 col5" >0.007784</td>
+      <td id="T_e1fd6_row13_col6" class="data row13 col6" >-0.000350</td>
+      <td id="T_e1fd6_row13_col7" class="data row13 col7" >-0.007998</td>
+      <td id="T_e1fd6_row13_col8" class="data row13 col8" >-0.031855</td>
+      <td id="T_e1fd6_row13_col9" class="data row13 col9" >0.000008</td>
+      <td id="T_e1fd6_row13_col10" class="data row13 col10" >0.011622</td>
+      <td id="T_e1fd6_row13_col11" class="data row13 col11" >0.028619</td>
+      <td id="T_e1fd6_row13_col12" class="data row13 col12" >0.016905</td>
+      <td id="T_e1fd6_row13_col13" class="data row13 col13" >1.000000</td>
+    </tr>
+  </tbody>
+</table>
+:::
+::::
+
+::: {.cell .code execution_count="45" executionInfo="{\"elapsed\":14,\"status\":\"ok\",\"timestamp\":1762193965790,\"user\":{\"displayName\":\"Avadhoot Ishtake\",\"userId\":\"15344878545858297286\"},\"user_tz\":-330}" id="xTJL6s1Y8Gux"}
+``` python
+x = df['Distance'].values.reshape(-1,1)  #Independent Variable
+y = df['fare_amount'].values.reshape(-1,1)  #Dependent Variable
+```
+:::
+
+:::: {.cell .code execution_count="46" colab="{\"base_uri\":\"https://localhost:8080/\",\"height\":0}" executionInfo="{\"elapsed\":10,\"status\":\"ok\",\"timestamp\":1762193974697,\"user\":{\"displayName\":\"Avadhoot Ishtake\",\"userId\":\"15344878545858297286\"},\"user_tz\":-330}" id="2aLoywl58gFA" outputId="5d5f9459-7439-43ee-ade9-c8e7f7faadf6"}
+``` python
+from sklearn.preprocessing import  StandardScaler
+std = StandardScaler()
+y_std = std.fit_transform(y)
+print(y_std)
+
+x_std = std.fit_transform(x)
+print(x_std)
+```
+
+::: {.output .stream .stdout}
+    [[-0.39820843]
+     [-0.37738556]
+     [ 0.1640092 ]
+     ...
+     [ 2.03806797]
+     [ 0.3305922 ]
+     [ 0.28894645]]
+    [[-0.43819769]
+     [-0.22258873]
+     [ 0.49552213]
+     ...
+     [ 2.67145829]
+     [ 0.07874908]
+     [ 0.60173174]]
+:::
+::::
+
+::: {.cell .code execution_count="47" executionInfo="{\"elapsed\":25,\"status\":\"ok\",\"timestamp\":1762193986085,\"user\":{\"displayName\":\"Avadhoot Ishtake\",\"userId\":\"15344878545858297286\"},\"user_tz\":-330}" id="mCG8ihwj8iPY"}
+``` python
+from sklearn.model_selection import train_test_split
+x_train,x_test,y_train,y_test = train_test_split(x_std,y_std,test_size=0.2,random_state=0)
+```
+:::
+
+:::: {.cell .code execution_count="48" colab="{\"base_uri\":\"https://localhost:8080/\",\"height\":0}" executionInfo="{\"elapsed\":22,\"status\":\"ok\",\"timestamp\":1762193992424,\"user\":{\"displayName\":\"Avadhoot Ishtake\",\"userId\":\"15344878545858297286\"},\"user_tz\":-330}" id="dk-GE8AA8lCb" outputId="450c5a7b-ce0b-4754-92ec-5d35ef662e27"}
+``` python
+from sklearn.linear_model import LinearRegression
+l_reg = LinearRegression()
+l_reg.fit(x_train,y_train)
+
+print("Training set score: {:.2f}".format(l_reg.score(x_train,y_train)))
+print("Test set score: {:.7f}".format(l_reg.score(x_test,y_test)))
+```
+
+::: {.output .stream .stdout}
+    Training set score: 0.74
+    Test set score: 0.7340468
+:::
+::::
+
+:::: {.cell .code execution_count="49" colab="{\"base_uri\":\"https://localhost:8080/\",\"height\":363}" executionInfo="{\"elapsed\":27,\"status\":\"ok\",\"timestamp\":1762194002259,\"user\":{\"displayName\":\"Avadhoot Ishtake\",\"userId\":\"15344878545858297286\"},\"user_tz\":-330}" id="UgJIxFaU8mjM" outputId="bfe2a0a6-fb7f-4f9d-f834-e0b8daa1df53"}
+``` python
+y_pred = l_reg.predict(x_test)
+
+result = pd.DataFrame()
+result[['Actual']] = y_test
+result[['predicted']] = y_pred
+
+result.sample(10)
+```
+
+::: {.output .execute_result execution_count="49"}
+``` json
+{"summary":"{\n  \"name\": \"result\",\n  \"rows\": 10,\n  \"fields\": [\n    {\n      \"column\": \"Actual\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 1.0501832924231247,\n        \"min\": -0.7105515587880078,\n        \"max\": 2.5169940997875737,\n        \"num_unique_values\": 8,\n        \"samples\": [\n          0.22647782595974175,\n          -0.29409405445567466,\n          -0.7105515587880078\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"predicted\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 0.9877618554179807,\n        \"min\": -0.606349295918703,\n        \"max\": 2.278181993457681,\n        \"num_unique_values\": 10,\n        \"samples\": [\n          -0.4902124063850475,\n          0.3432163853215668,\n          -0.21468110035648705\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    }\n  ]\n}","type":"dataframe"}
+```
+:::
+::::
+
+:::: {.cell .code execution_count="50" colab="{\"base_uri\":\"https://localhost:8080/\",\"height\":0}" executionInfo="{\"elapsed\":48,\"status\":\"ok\",\"timestamp\":1762194010373,\"user\":{\"displayName\":\"Avadhoot Ishtake\",\"userId\":\"15344878545858297286\"},\"user_tz\":-330}" id="y81zghg18o-D" outputId="a6e050de-48ad-4c11-c8b2-7463a5619590"}
+``` python
+print('Mean Absolute Error : ', metrics.mean_absolute_error(y_test,y_pred))
+print('Mean Absolute % Error : ', metrics.mean_absolute_percentage_error(y_test,y_pred))
+print('Mean Squared Error : ', metrics.mean_squared_error(y_test,y_pred))
+print('Root Mean Squared Error : ', np.sqrt(metrics.mean_absolute_error(y_test,y_pred)))
+print('Mean Absolute Error : ', np.sqrt(metrics.mean_absolute_error(y_test,y_pred)))
+```
+
+::: {.output .stream .stdout}
+    Mean Absolute Error :  0.26621298757938955
+    Mean Absolute % Error :  1.983074763340738
+    Mean Squared Error :  0.2705243510778542
+    Root Mean Squared Error :  0.5159583196144719
+    Mean Absolute Error :  0.5159583196144719
+:::
+::::
+
+:::: {.cell .code execution_count="51" colab="{\"base_uri\":\"https://localhost:8080/\",\"height\":287}" executionInfo="{\"elapsed\":1374,\"status\":\"ok\",\"timestamp\":1762194017843,\"user\":{\"displayName\":\"Avadhoot Ishtake\",\"userId\":\"15344878545858297286\"},\"user_tz\":-330}" id="39yT-K4J8q9t" outputId="a73beaf0-7632-4489-b7bc-e90c6aa4034d"}
+``` python
+plt.subplot(2,2,1)
+plt.scatter(x_train,y_train,color='red')
+plt.plot(x_train,l_reg.predict(x_train),color='blue')
+plt.title("Fare vs Distance (Training Set)")
+
+plt.subplot(2,2,2)
+plt.scatter(x_test,y_test,color='red')
+plt.plot(x_train,l_reg.predict(x_train),color='blue')
+plt.ylabel("fare_amount")
+plt.xlabel("Distance")
+plt.title("Fare vs Distance (Test Set)")
+
+plt.tight_layout()
+plt.show()
+```
+
+::: {.output .display_data}
+![](ce7fb124caf1147b0c051059cdc5b6283c782f52.png)
+:::
+::::
+
+::::: {.cell .code execution_count="53" colab="{\"base_uri\":\"https://localhost:8080/\",\"height\":144}" executionInfo="{\"elapsed\":16,\"status\":\"ok\",\"timestamp\":1762194039213,\"user\":{\"displayName\":\"Avadhoot Ishtake\",\"userId\":\"15344878545858297286\"},\"user_tz\":-330}" id="a0-X466C8sb5" outputId="7ecca117-326e-4b72-934f-f684e331f8aa"}
+``` python
+cols = ['Model', 'RMSE', 'R-Squared']
+
+#create a empty dataframe of the columns
+#columns: specifies the columns to be selected
+result_tabulation = pd.DataFrame(columns=cols)
+
+#compile the required information
+linreg_metrics = pd.DataFrame([[
+    'Linear Regression Model',
+    np.sqrt(metrics.mean_squared_error(y_test,y_pred)),
+    metrics.r2_score(y_test,y_pred)
+]], columns = cols)
+
+result_tabulation = pd.concat([result_tabulation,linreg_metrics], ignore_index = True)
+
+result_tabulation
+```
+
+::: {.output .stream .stderr}
+    /tmp/ipython-input-944083519.py:14: FutureWarning: The behavior of DataFrame concatenation with empty or all-NA entries is deprecated. In a future version, this will no longer exclude empty or all-NA columns when determining the result dtypes. To retain the old behavior, exclude the relevant entries before the concat operation.
+      result_tabulation = pd.concat([result_tabulation,linreg_metrics], ignore_index = True)
+:::
+
+::: {.output .execute_result execution_count="53"}
+``` json
+{"summary":"{\n  \"name\": \"result_tabulation\",\n  \"rows\": 1,\n  \"fields\": [\n    {\n      \"column\": \"Model\",\n      \"properties\": {\n        \"dtype\": \"string\",\n        \"num_unique_values\": 1,\n        \"samples\": [\n          \"Linear Regression Model\"\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"RMSE\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": null,\n        \"min\": 0.5201195546005305,\n        \"max\": 0.5201195546005305,\n        \"num_unique_values\": 1,\n        \"samples\": [\n          0.5201195546005305\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"R-Squared\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": null,\n        \"min\": 0.7340467931331909,\n        \"max\": 0.7340467931331909,\n        \"num_unique_values\": 1,\n        \"samples\": [\n          0.7340467931331909\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    }\n  ]\n}","type":"dataframe","variable_name":"result_tabulation"}
+```
+:::
+:::::
+
+::::: {.cell .code execution_count="54" colab="{\"base_uri\":\"https://localhost:8080/\",\"height\":135}" executionInfo="{\"elapsed\":91980,\"status\":\"ok\",\"timestamp\":1762194148486,\"user\":{\"displayName\":\"Avadhoot Ishtake\",\"userId\":\"15344878545858297286\"},\"user_tz\":-330}" id="wm2wI2qP8udX" outputId="3883c403-73dc-4c6c-9bb0-1890f490cf31"}
+``` python
+rf_reg = RandomForestRegressor(n_estimators=100, random_state=10)
+
+#fit the regressor with training dataset
+rf_reg.fit(x_train,y_train)
+```
+
+::: {.output .stream .stderr}
+    /usr/local/lib/python3.12/dist-packages/sklearn/base.py:1389: DataConversionWarning: A column-vector y was passed when a 1d array was expected. Please change the shape of y to (n_samples,), for example using ravel().
+      return fit_method(estimator, *args, **kwargs)
+:::
+
+::: {.output .execute_result execution_count="54"}
+<style>#sk-container-id-1 {
+  /* Definition of color scheme common for light and dark mode */
+  --sklearn-color-text: #000;
+  --sklearn-color-text-muted: #666;
+  --sklearn-color-line: gray;
+  /* Definition of color scheme for unfitted estimators */
+  --sklearn-color-unfitted-level-0: #fff5e6;
+  --sklearn-color-unfitted-level-1: #f6e4d2;
+  --sklearn-color-unfitted-level-2: #ffe0b3;
+  --sklearn-color-unfitted-level-3: chocolate;
+  /* Definition of color scheme for fitted estimators */
+  --sklearn-color-fitted-level-0: #f0f8ff;
+  --sklearn-color-fitted-level-1: #d4ebff;
+  --sklearn-color-fitted-level-2: #b3dbfd;
+  --sklearn-color-fitted-level-3: cornflowerblue;
+
+  /* Specific color for light theme */
+  --sklearn-color-text-on-default-background: var(--sg-text-color, var(--theme-code-foreground, var(--jp-content-font-color1, black)));
+  --sklearn-color-background: var(--sg-background-color, var(--theme-background, var(--jp-layout-color0, white)));
+  --sklearn-color-border-box: var(--sg-text-color, var(--theme-code-foreground, var(--jp-content-font-color1, black)));
+  --sklearn-color-icon: #696969;
+
+  @media (prefers-color-scheme: dark) {
+    /* Redefinition of color scheme for dark theme */
+    --sklearn-color-text-on-default-background: var(--sg-text-color, var(--theme-code-foreground, var(--jp-content-font-color1, white)));
+    --sklearn-color-background: var(--sg-background-color, var(--theme-background, var(--jp-layout-color0, #111)));
+    --sklearn-color-border-box: var(--sg-text-color, var(--theme-code-foreground, var(--jp-content-font-color1, white)));
+    --sklearn-color-icon: #878787;
+  }
+}
+
+#sk-container-id-1 {
+  color: var(--sklearn-color-text);
+}
+
+#sk-container-id-1 pre {
+  padding: 0;
+}
+
+#sk-container-id-1 input.sk-hidden--visually {
+  border: 0;
+  clip: rect(1px 1px 1px 1px);
+  clip: rect(1px, 1px, 1px, 1px);
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  width: 1px;
+}
+
+#sk-container-id-1 div.sk-dashed-wrapped {
+  border: 1px dashed var(--sklearn-color-line);
+  margin: 0 0.4em 0.5em 0.4em;
+  box-sizing: border-box;
+  padding-bottom: 0.4em;
+  background-color: var(--sklearn-color-background);
+}
+
+#sk-container-id-1 div.sk-container {
+  /* jupyter's `normalize.less` sets `[hidden] { display: none; }`
+     but bootstrap.min.css set `[hidden] { display: none !important; }`
+     so we also need the `!important` here to be able to override the
+     default hidden behavior on the sphinx rendered scikit-learn.org.
+     See: https://github.com/scikit-learn/scikit-learn/issues/21755 */
+  display: inline-block !important;
+  position: relative;
+}
+
+#sk-container-id-1 div.sk-text-repr-fallback {
+  display: none;
+}
+
+div.sk-parallel-item,
+div.sk-serial,
+div.sk-item {
+  /* draw centered vertical line to link estimators */
+  background-image: linear-gradient(var(--sklearn-color-text-on-default-background), var(--sklearn-color-text-on-default-background));
+  background-size: 2px 100%;
+  background-repeat: no-repeat;
+  background-position: center center;
+}
+
+/* Parallel-specific style estimator block */
+
+#sk-container-id-1 div.sk-parallel-item::after {
+  content: "";
+  width: 100%;
+  border-bottom: 2px solid var(--sklearn-color-text-on-default-background);
+  flex-grow: 1;
+}
+
+#sk-container-id-1 div.sk-parallel {
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  background-color: var(--sklearn-color-background);
+  position: relative;
+}
+
+#sk-container-id-1 div.sk-parallel-item {
+  display: flex;
+  flex-direction: column;
+}
+
+#sk-container-id-1 div.sk-parallel-item:first-child::after {
+  align-self: flex-end;
+  width: 50%;
+}
+
+#sk-container-id-1 div.sk-parallel-item:last-child::after {
+  align-self: flex-start;
+  width: 50%;
+}
+
+#sk-container-id-1 div.sk-parallel-item:only-child::after {
+  width: 0;
+}
+
+/* Serial-specific style estimator block */
+
+#sk-container-id-1 div.sk-serial {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background-color: var(--sklearn-color-background);
+  padding-right: 1em;
+  padding-left: 1em;
+}
+
+
+/* Toggleable style: style used for estimator/Pipeline/ColumnTransformer box that is
+clickable and can be expanded/collapsed.
+- Pipeline and ColumnTransformer use this feature and define the default style
+- Estimators will overwrite some part of the style using the `sk-estimator` class
+*/
+
+/* Pipeline and ColumnTransformer style (default) */
+
+#sk-container-id-1 div.sk-toggleable {
+  /* Default theme specific background. It is overwritten whether we have a
+  specific estimator or a Pipeline/ColumnTransformer */
+  background-color: var(--sklearn-color-background);
+}
+
+/* Toggleable label */
+#sk-container-id-1 label.sk-toggleable__label {
+  cursor: pointer;
+  display: flex;
+  width: 100%;
+  margin-bottom: 0;
+  padding: 0.5em;
+  box-sizing: border-box;
+  text-align: center;
+  align-items: start;
+  justify-content: space-between;
+  gap: 0.5em;
+}
+
+#sk-container-id-1 label.sk-toggleable__label .caption {
+  font-size: 0.6rem;
+  font-weight: lighter;
+  color: var(--sklearn-color-text-muted);
+}
+
+#sk-container-id-1 label.sk-toggleable__label-arrow:before {
+  /* Arrow on the left of the label */
+  content: "▸";
+  float: left;
+  margin-right: 0.25em;
+  color: var(--sklearn-color-icon);
+}
+
+#sk-container-id-1 label.sk-toggleable__label-arrow:hover:before {
+  color: var(--sklearn-color-text);
+}
+
+/* Toggleable content - dropdown */
+
+#sk-container-id-1 div.sk-toggleable__content {
+  max-height: 0;
+  max-width: 0;
+  overflow: hidden;
+  text-align: left;
+  /* unfitted */
+  background-color: var(--sklearn-color-unfitted-level-0);
+}
+
+#sk-container-id-1 div.sk-toggleable__content.fitted {
+  /* fitted */
+  background-color: var(--sklearn-color-fitted-level-0);
+}
+
+#sk-container-id-1 div.sk-toggleable__content pre {
+  margin: 0.2em;
+  border-radius: 0.25em;
+  color: var(--sklearn-color-text);
+  /* unfitted */
+  background-color: var(--sklearn-color-unfitted-level-0);
+}
+
+#sk-container-id-1 div.sk-toggleable__content.fitted pre {
+  /* unfitted */
+  background-color: var(--sklearn-color-fitted-level-0);
+}
+
+#sk-container-id-1 input.sk-toggleable__control:checked~div.sk-toggleable__content {
+  /* Expand drop-down */
+  max-height: 200px;
+  max-width: 100%;
+  overflow: auto;
+}
+
+#sk-container-id-1 input.sk-toggleable__control:checked~label.sk-toggleable__label-arrow:before {
+  content: "▾";
+}
+
+/* Pipeline/ColumnTransformer-specific style */
+
+#sk-container-id-1 div.sk-label input.sk-toggleable__control:checked~label.sk-toggleable__label {
+  color: var(--sklearn-color-text);
+  background-color: var(--sklearn-color-unfitted-level-2);
+}
+
+#sk-container-id-1 div.sk-label.fitted input.sk-toggleable__control:checked~label.sk-toggleable__label {
+  background-color: var(--sklearn-color-fitted-level-2);
+}
+
+/* Estimator-specific style */
+
+/* Colorize estimator box */
+#sk-container-id-1 div.sk-estimator input.sk-toggleable__control:checked~label.sk-toggleable__label {
+  /* unfitted */
+  background-color: var(--sklearn-color-unfitted-level-2);
+}
+
+#sk-container-id-1 div.sk-estimator.fitted input.sk-toggleable__control:checked~label.sk-toggleable__label {
+  /* fitted */
+  background-color: var(--sklearn-color-fitted-level-2);
+}
+
+#sk-container-id-1 div.sk-label label.sk-toggleable__label,
+#sk-container-id-1 div.sk-label label {
+  /* The background is the default theme color */
+  color: var(--sklearn-color-text-on-default-background);
+}
+
+/* On hover, darken the color of the background */
+#sk-container-id-1 div.sk-label:hover label.sk-toggleable__label {
+  color: var(--sklearn-color-text);
+  background-color: var(--sklearn-color-unfitted-level-2);
+}
+
+/* Label box, darken color on hover, fitted */
+#sk-container-id-1 div.sk-label.fitted:hover label.sk-toggleable__label.fitted {
+  color: var(--sklearn-color-text);
+  background-color: var(--sklearn-color-fitted-level-2);
+}
+
+/* Estimator label */
+
+#sk-container-id-1 div.sk-label label {
+  font-family: monospace;
+  font-weight: bold;
+  display: inline-block;
+  line-height: 1.2em;
+}
+
+#sk-container-id-1 div.sk-label-container {
+  text-align: center;
+}
+
+/* Estimator-specific */
+#sk-container-id-1 div.sk-estimator {
+  font-family: monospace;
+  border: 1px dotted var(--sklearn-color-border-box);
+  border-radius: 0.25em;
+  box-sizing: border-box;
+  margin-bottom: 0.5em;
+  /* unfitted */
+  background-color: var(--sklearn-color-unfitted-level-0);
+}
+
+#sk-container-id-1 div.sk-estimator.fitted {
+  /* fitted */
+  background-color: var(--sklearn-color-fitted-level-0);
+}
+
+/* on hover */
+#sk-container-id-1 div.sk-estimator:hover {
+  /* unfitted */
+  background-color: var(--sklearn-color-unfitted-level-2);
+}
+
+#sk-container-id-1 div.sk-estimator.fitted:hover {
+  /* fitted */
+  background-color: var(--sklearn-color-fitted-level-2);
+}
+
+/* Specification for estimator info (e.g. "i" and "?") */
+
+/* Common style for "i" and "?" */
+
+.sk-estimator-doc-link,
+a:link.sk-estimator-doc-link,
+a:visited.sk-estimator-doc-link {
+  float: right;
+  font-size: smaller;
+  line-height: 1em;
+  font-family: monospace;
+  background-color: var(--sklearn-color-background);
+  border-radius: 1em;
+  height: 1em;
+  width: 1em;
+  text-decoration: none !important;
+  margin-left: 0.5em;
+  text-align: center;
+  /* unfitted */
+  border: var(--sklearn-color-unfitted-level-1) 1pt solid;
+  color: var(--sklearn-color-unfitted-level-1);
+}
+
+.sk-estimator-doc-link.fitted,
+a:link.sk-estimator-doc-link.fitted,
+a:visited.sk-estimator-doc-link.fitted {
+  /* fitted */
+  border: var(--sklearn-color-fitted-level-1) 1pt solid;
+  color: var(--sklearn-color-fitted-level-1);
+}
+
+/* On hover */
+div.sk-estimator:hover .sk-estimator-doc-link:hover,
+.sk-estimator-doc-link:hover,
+div.sk-label-container:hover .sk-estimator-doc-link:hover,
+.sk-estimator-doc-link:hover {
+  /* unfitted */
+  background-color: var(--sklearn-color-unfitted-level-3);
+  color: var(--sklearn-color-background);
+  text-decoration: none;
+}
+
+div.sk-estimator.fitted:hover .sk-estimator-doc-link.fitted:hover,
+.sk-estimator-doc-link.fitted:hover,
+div.sk-label-container:hover .sk-estimator-doc-link.fitted:hover,
+.sk-estimator-doc-link.fitted:hover {
+  /* fitted */
+  background-color: var(--sklearn-color-fitted-level-3);
+  color: var(--sklearn-color-background);
+  text-decoration: none;
+}
+
+/* Span, style for the box shown on hovering the info icon */
+.sk-estimator-doc-link span {
+  display: none;
+  z-index: 9999;
+  position: relative;
+  font-weight: normal;
+  right: .2ex;
+  padding: .5ex;
+  margin: .5ex;
+  width: min-content;
+  min-width: 20ex;
+  max-width: 50ex;
+  color: var(--sklearn-color-text);
+  box-shadow: 2pt 2pt 4pt #999;
+  /* unfitted */
+  background: var(--sklearn-color-unfitted-level-0);
+  border: .5pt solid var(--sklearn-color-unfitted-level-3);
+}
+
+.sk-estimator-doc-link.fitted span {
+  /* fitted */
+  background: var(--sklearn-color-fitted-level-0);
+  border: var(--sklearn-color-fitted-level-3);
+}
+
+.sk-estimator-doc-link:hover span {
+  display: block;
+}
+
+/* "?"-specific style due to the `<a>` HTML tag */
+
+#sk-container-id-1 a.estimator_doc_link {
+  float: right;
+  font-size: 1rem;
+  line-height: 1em;
+  font-family: monospace;
+  background-color: var(--sklearn-color-background);
+  border-radius: 1rem;
+  height: 1rem;
+  width: 1rem;
+  text-decoration: none;
+  /* unfitted */
+  color: var(--sklearn-color-unfitted-level-1);
+  border: var(--sklearn-color-unfitted-level-1) 1pt solid;
+}
+
+#sk-container-id-1 a.estimator_doc_link.fitted {
+  /* fitted */
+  border: var(--sklearn-color-fitted-level-1) 1pt solid;
+  color: var(--sklearn-color-fitted-level-1);
+}
+
+/* On hover */
+#sk-container-id-1 a.estimator_doc_link:hover {
+  /* unfitted */
+  background-color: var(--sklearn-color-unfitted-level-3);
+  color: var(--sklearn-color-background);
+  text-decoration: none;
+}
+
+#sk-container-id-1 a.estimator_doc_link.fitted:hover {
+  /* fitted */
+  background-color: var(--sklearn-color-fitted-level-3);
+}
+</style><div id="sk-container-id-1" class="sk-top-container"><div class="sk-text-repr-fallback"><pre>RandomForestRegressor(random_state=10)</pre><b>In a Jupyter environment, please rerun this cell to show the HTML representation or trust the notebook. <br />On GitHub, the HTML representation is unable to render, please try loading this page with nbviewer.org.</b></div><div class="sk-container" hidden><div class="sk-item"><div class="sk-estimator fitted sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="sk-estimator-id-1" type="checkbox" checked><label for="sk-estimator-id-1" class="sk-toggleable__label fitted sk-toggleable__label-arrow"><div><div>RandomForestRegressor</div></div><div><a class="sk-estimator-doc-link fitted" rel="noreferrer" target="_blank" href="https://scikit-learn.org/1.6/modules/generated/sklearn.ensemble.RandomForestRegressor.html">?<span>Documentation for RandomForestRegressor</span></a><span class="sk-estimator-doc-link fitted">i<span>Fitted</span></span></div></label><div class="sk-toggleable__content fitted"><pre>RandomForestRegressor(random_state=10)</pre></div> </div></div></div></div>
+:::
+:::::
+
+:::: {.cell .code execution_count="55" colab="{\"base_uri\":\"https://localhost:8080/\",\"height\":363}" executionInfo="{\"elapsed\":2736,\"status\":\"ok\",\"timestamp\":1762194151228,\"user\":{\"displayName\":\"Avadhoot Ishtake\",\"userId\":\"15344878545858297286\"},\"user_tz\":-330}" id="5yumOn4o82PO" outputId="c6c2ce0c-811c-4915-846f-8c6bffe34121"}
+``` python
+#predict the value on test dataset using predict()
+y_pred_RF = rf_reg.predict(x_test)
+
+result = pd.DataFrame()
+result[['Actual']] = y_test
+result[['predicted']] = y_pred_RF.reshape(-1,1)
+
+result.sample(10)
+```
+
+::: {.output .execute_result execution_count="55"}
+``` json
+{"summary":"{\n  \"name\": \"result\",\n  \"rows\": 10,\n  \"fields\": [\n    {\n      \"column\": \"Actual\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 0.28878265968097055,\n        \"min\": -0.6689058083547744,\n        \"max\": 0.24730070117635833,\n        \"num_unique_values\": 9,\n        \"samples\": [\n          -0.0858653022895081,\n          -0.39820843053875793,\n          -0.3461512424972163\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"predicted\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 0.4334013287671184,\n        \"min\": -0.5671860629216013,\n        \"max\": 0.9427014419104873,\n        \"num_unique_values\": 10,\n        \"samples\": [\n          -0.3696810914919934,\n          -0.38030075785246803,\n          -0.4336489641574392\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    }\n  ]\n}","type":"dataframe"}
+```
+:::
+::::
+
+:::: {.cell .code execution_count="56" colab="{\"base_uri\":\"https://localhost:8080/\",\"height\":0}" executionInfo="{\"elapsed\":17,\"status\":\"ok\",\"timestamp\":1762194151251,\"user\":{\"displayName\":\"Avadhoot Ishtake\",\"userId\":\"15344878545858297286\"},\"user_tz\":-330}" id="ekYEjXLY83to" outputId="454e781f-3693-40d1-d02c-72c21b383f74"}
+``` python
+print('Mean Absolute Error:', metrics.mean_absolute_error(y_test, y_pred_RF))
+print('Mean Absolute % Error:', metrics.mean_absolute_percentage_error(y_test,y_pred_RF))
+print('Mean Squared Error:', metrics.mean_squared_error(y_test, y_pred_RF))
+print('Root Mean Squared Error:', np.sqrt(metrics.mean_squared_error(y_test, y_pred_RF)))
+print('R Squared (R^2):', np.sqrt(metrics.r2_score(y_test, y_pred_RF)))
+```
+
+::: {.output .stream .stdout}
+    Mean Absolute Error: 0.30783177020079394
+    Mean Absolute % Error: 2.160614890031087
+    Mean Squared Error: 0.33313782742221676
+    Root Mean Squared Error: 0.5771809312704438
+    R Squared (R^2): 0.8200556801298313
+:::
+::::
+
+:::: {.cell .code execution_count="57" colab="{\"base_uri\":\"https://localhost:8080/\",\"height\":487}" executionInfo="{\"elapsed\":379,\"status\":\"ok\",\"timestamp\":1762194151660,\"user\":{\"displayName\":\"Avadhoot Ishtake\",\"userId\":\"15344878545858297286\"},\"user_tz\":-330}" id="-7BSlwp59AMu" outputId="5e6e515b-9aa8-4e28-983b-b7accf695aba"}
+``` python
+#Build Scaterplot
+plt.scatter(x_test,y_test,c = 'b', alpha = 0.5, marker = '.', label = 'Real')
+plt.scatter(x_test,y_pred_RF, c='r', alpha = 0.5, marker = '.', label = 'Predicted')
+plt.xlabel('Carat')
+plt.ylabel('Price')
+plt.grid(color = '#D3D3D3', linestyle = 'solid')
+plt.legend(loc = 'lower right')
+
+plt.tight_layout()
+plt.show()
+```
+
+::: {.output .display_data}
+![](66b48dc5f6e3d6fed73d6efb544c6f1b60588006.png)
+:::
+::::
+
+:::: {.cell .code execution_count="58" colab="{\"base_uri\":\"https://localhost:8080/\",\"height\":125}" executionInfo="{\"elapsed\":15,\"status\":\"ok\",\"timestamp\":1762194151679,\"user\":{\"displayName\":\"Avadhoot Ishtake\",\"userId\":\"15344878545858297286\"},\"user_tz\":-330}" id="_EGGOSa79CmW" outputId="21a84fc9-dbff-4fe6-d18b-82a4626f2acd"}
+``` python
+#compile the required information
+random_forest_metrics = pd.DataFrame([[
+    "Random Forest Regressor Model",
+    np.sqrt(metrics.mean_squared_error(y_test,y_pred_RF)),
+    np.sqrt(metrics.r2_score(y_test,y_pred_RF))
+]], columns = cols)
+
+result_tabulation = pd.concat([result_tabulation, random_forest_metrics], ignore_index = True)
+
+result_tabulation
+```
+
+::: {.output .execute_result execution_count="58"}
+``` json
+{"summary":"{\n  \"name\": \"result_tabulation\",\n  \"rows\": 2,\n  \"fields\": [\n    {\n      \"column\": \"Model\",\n      \"properties\": {\n        \"dtype\": \"string\",\n        \"num_unique_values\": 2,\n        \"samples\": [\n          \"Random Forest Regressor Model\",\n          \"Linear Regression Model\"\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"RMSE\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 0.04034848638713554,\n        \"min\": 0.5201195546005305,\n        \"max\": 0.5771809312704438,\n        \"num_unique_values\": 2,\n        \"samples\": [\n          0.5771809312704438,\n          0.5201195546005305\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"R-Squared\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 0.06081746723763193,\n        \"min\": 0.7340467931331909,\n        \"max\": 0.8200556801298313,\n        \"num_unique_values\": 2,\n        \"samples\": [\n          0.8200556801298313,\n          0.7340467931331909\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    }\n  ]\n}","type":"dataframe","variable_name":"result_tabulation"}
+```
+:::
+::::

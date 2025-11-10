@@ -1,0 +1,293 @@
+
+
+Experiment-3 (Group B): NEural Network-based classifier
+
+    import pandas as pd
+    import numpy as np
+    import seaborn as sns
+    import matplotlib.pyplot as plt
+    from sklearn.compose import ColumnTransformer
+    from sklearn.model_selection import train_test_split
+    from sklearn.preprocessing import LabelEncoder, OneHotEncoder, StandardScaler
+    from sklearn.svm import SVC, LinearSVC
+    from sklearn.neighbors import KNeighborsClassifier
+    from sklearn import metrics
+    from sklearn import preprocessing
+    import kagglehub
+    from kagglehub import KaggleDatasetAdapter
+
+    file_path="Churn_Modelling.csv"
+    df = kagglehub.load_dataset(
+      KaggleDatasetAdapter.PANDAS,
+      "barelydedicated/bank-customer-churn-modeling",
+      file_path
+    )
+
+    /tmp/ipython-input-1704173098.py:2: DeprecationWarning: Use dataset_load() instead of load_dataset(). load_dataset() will be removed in a future version.
+      df = kagglehub.load_dataset(
+
+    Downloading from https://www.kaggle.com/api/v1/datasets/download/barelydedicated/bank-customer-churn-modeling?dataset_version_number=1&file_name=Churn_Modelling.csv...
+
+    100%|██████████| 669k/669k [00:00<00:00, 1.99MB/s]
+
+    df.info()
+
+    <class 'pandas.core.frame.DataFrame'>
+    RangeIndex: 10000 entries, 0 to 9999
+    Data columns (total 14 columns):
+     #   Column           Non-Null Count  Dtype  
+    ---  ------           --------------  -----  
+     0   RowNumber        10000 non-null  int64  
+     1   CustomerId       10000 non-null  int64  
+     2   Surname          10000 non-null  object 
+     3   CreditScore      10000 non-null  int64  
+     4   Geography        10000 non-null  object 
+     5   Gender           10000 non-null  object 
+     6   Age              10000 non-null  int64  
+     7   Tenure           10000 non-null  int64  
+     8   Balance          10000 non-null  float64
+     9   NumOfProducts    10000 non-null  int64  
+     10  HasCrCard        10000 non-null  int64  
+     11  IsActiveMember   10000 non-null  int64  
+     12  EstimatedSalary  10000 non-null  float64
+     13  Exited           10000 non-null  int64  
+    dtypes: float64(2), int64(9), object(3)
+    memory usage: 1.1+ MB
+
+    df.head(5)
+
+    {"summary":"{\n  \"name\": \"df\",\n  \"rows\": 10000,\n  \"fields\": [\n    {\n      \"column\": \"CreditScore\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 96,\n        \"min\": 350,\n        \"max\": 850,\n        \"num_unique_values\": 460,\n        \"samples\": [\n          754,\n          533,\n          744\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"Geography\",\n      \"properties\": {\n        \"dtype\": \"category\",\n        \"num_unique_values\": 3,\n        \"samples\": [\n          \"France\",\n          \"Spain\",\n          \"Germany\"\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"Gender\",\n      \"properties\": {\n        \"dtype\": \"category\",\n        \"num_unique_values\": 2,\n        \"samples\": [\n          \"Male\",\n          \"Female\"\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"Age\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 10,\n        \"min\": 18,\n        \"max\": 92,\n        \"num_unique_values\": 70,\n        \"samples\": [\n          61,\n          42\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"Tenure\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 2,\n        \"min\": 0,\n        \"max\": 10,\n        \"num_unique_values\": 11,\n        \"samples\": [\n          6,\n          2\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"Balance\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 62397.40520238623,\n        \"min\": 0.0,\n        \"max\": 250898.09,\n        \"num_unique_values\": 6382,\n        \"samples\": [\n          117707.18,\n          133050.97\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"NumOfProducts\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 0,\n        \"min\": 1,\n        \"max\": 4,\n        \"num_unique_values\": 4,\n        \"samples\": [\n          3,\n          4\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"HasCrCard\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 0,\n        \"min\": 0,\n        \"max\": 1,\n        \"num_unique_values\": 2,\n        \"samples\": [\n          0,\n          1\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"IsActiveMember\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 0,\n        \"min\": 0,\n        \"max\": 1,\n        \"num_unique_values\": 2,\n        \"samples\": [\n          0,\n          1\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"EstimatedSalary\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 57510.49281769822,\n        \"min\": 11.58,\n        \"max\": 199992.48,\n        \"num_unique_values\": 9999,\n        \"samples\": [\n          100809.99,\n          95273.73\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"Exited\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 0,\n        \"min\": 0,\n        \"max\": 1,\n        \"num_unique_values\": 2,\n        \"samples\": [\n          0,\n          1\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    }\n  ]\n}","type":"dataframe","variable_name":"df"}
+
+    df.drop(columns=['RowNumber', 'CustomerId', 'Surname'], inplace=True)
+
+    df.isna().sum()
+
+    CreditScore        0
+    Geography          0
+    Gender             0
+    Age                0
+    Tenure             0
+    Balance            0
+    NumOfProducts      0
+    HasCrCard          0
+    IsActiveMember     0
+    EstimatedSalary    0
+    Exited             0
+    dtype: int64
+
+    df.describe()
+
+    {"summary":"{\n  \"name\": \"df\",\n  \"rows\": 8,\n  \"fields\": [\n    {\n      \"column\": \"CreditScore\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 3346.722396870626,\n        \"min\": 96.65329873613061,\n        \"max\": 10000.0,\n        \"num_unique_values\": 8,\n        \"samples\": [\n          650.5288,\n          652.0,\n          10000.0\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"Age\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 3521.859127755016,\n        \"min\": 10.487806451704591,\n        \"max\": 10000.0,\n        \"num_unique_values\": 8,\n        \"samples\": [\n          38.9218,\n          37.0,\n          10000.0\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"Tenure\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 3533.873203213367,\n        \"min\": 0.0,\n        \"max\": 10000.0,\n        \"num_unique_values\": 8,\n        \"samples\": [\n          5.0128,\n          5.0,\n          10000.0\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"Balance\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 84316.21503683121,\n        \"min\": 0.0,\n        \"max\": 250898.09,\n        \"num_unique_values\": 7,\n        \"samples\": [\n          10000.0,\n          76485.889288,\n          127644.24\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"NumOfProducts\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 3534.972835009293,\n        \"min\": 0.5816543579989936,\n        \"max\": 10000.0,\n        \"num_unique_values\": 6,\n        \"samples\": [\n          10000.0,\n          1.5302,\n          4.0\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"HasCrCard\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 3535.323751385342,\n        \"min\": 0.0,\n        \"max\": 10000.0,\n        \"num_unique_values\": 5,\n        \"samples\": [\n          0.7055,\n          1.0,\n          0.45584046447514237\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"IsActiveMember\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 3535.33114750997,\n        \"min\": 0.0,\n        \"max\": 10000.0,\n        \"num_unique_values\": 5,\n        \"samples\": [\n          0.5151,\n          1.0,\n          0.4997969284589202\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"EstimatedSalary\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 68211.65700170657,\n        \"min\": 11.58,\n        \"max\": 199992.48,\n        \"num_unique_values\": 8,\n        \"samples\": [\n          100090.239881,\n          100193.915,\n          10000.0\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"Exited\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 3535.452783887065,\n        \"min\": 0.0,\n        \"max\": 10000.0,\n        \"num_unique_values\": 5,\n        \"samples\": [\n          0.2037,\n          1.0,\n          0.40276858399484955\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    }\n  ]\n}","type":"dataframe"}
+
+    X=df.iloc[:, :df.shape[1]-1].values
+    y=df.iloc[:, -1].values
+    X.shape, y.shape
+
+    ((10000, 10), (10000,))
+
+    print(X[:8,1], '...will now become: ')
+
+    label_X_country_encoder = LabelEncoder()
+    X[:,1] = label_X_country_encoder.fit_transform(X[:,1])
+    print(X[:8,1])
+
+    ['France' 'Spain' 'France' 'France' 'Spain' 'Spain' 'France' 'Germany'] ...will now become: 
+    [0 2 0 0 2 2 0 1]
+
+    print(X[:6,2], '...will now become: ')
+
+    label_X_gender_encoder = LabelEncoder()
+    X[:,2] = label_X_gender_encoder.fit_transform(X[:,2])
+    print(X[:6,2])
+
+    ['Female' 'Female' 'Female' 'Female' 'Female' 'Male'] ...will now become: 
+    [0 0 0 0 0 1]
+
+    transform = ColumnTransformer([("countries", OneHotEncoder(), [1])], remainder="passthrough")
+    X = transform.fit_transform(X)
+    X
+
+    array([[1.0, 0.0, 0.0, ..., 1, 1, 101348.88],
+           [0.0, 0.0, 1.0, ..., 0, 1, 112542.58],
+           [1.0, 0.0, 0.0, ..., 1, 0, 113931.57],
+           ...,
+           [1.0, 0.0, 0.0, ..., 0, 1, 42085.58],
+           [0.0, 1.0, 0.0, ..., 1, 0, 92888.52],
+           [1.0, 0.0, 0.0, ..., 1, 0, 38190.78]], dtype=object)
+
+    X = X[:,1:]
+    X.shape
+
+    (10000, 11)
+
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0)
+
+    sc = StandardScaler()
+    X_train[:,np.array([2,4,5,6,7,10])] = sc.fit_transform(X_train[:,np.array([2,4,5,6,7,10])])
+    X_test[:,np.array([2,4,5,6,7,10])] = sc.transform(X_test[:, np.array([2,4,5,6,7,10])])
+
+    sc = StandardScaler()
+    X_train = sc.fit_transform(X_train)
+    X_test = sc.transform(X_test)
+    X_train
+
+    array([[-0.5698444 ,  1.74309049,  0.16958176, ...,  0.64259497,
+            -1.03227043,  1.10643166],
+           [ 1.75486502, -0.57369368, -2.30455945, ...,  0.64259497,
+             0.9687384 , -0.74866447],
+           [-0.5698444 , -0.57369368, -1.19119591, ...,  0.64259497,
+            -1.03227043,  1.48533467],
+           ...,
+           [-0.5698444 , -0.57369368,  0.9015152 , ...,  0.64259497,
+            -1.03227043,  1.41231994],
+           [-0.5698444 ,  1.74309049, -0.62420521, ...,  0.64259497,
+             0.9687384 ,  0.84432121],
+           [ 1.75486502, -0.57369368, -0.28401079, ...,  0.64259497,
+            -1.03227043,  0.32472465]])
+
+    from tensorflow.keras.models import Sequential
+
+    #initializing the ANN
+    classifier = Sequential()
+
+    from tensorflow.keras.layers import Dense
+
+    classifier.add(Dense(activation = 'relu', input_dim = 11, units=256, kernel_initializer='uniform'))
+
+    /usr/local/lib/python3.12/dist-packages/keras/src/layers/core/dense.py:93: UserWarning: Do not pass an `input_shape`/`input_dim` argument to a layer. When using Sequential models, prefer using an `Input(shape)` object as the first layer in the model instead.
+      super().__init__(activity_regularizer=activity_regularizer, **kwargs)
+
+    #adding hidden layer
+
+    classifier.add(Dense(activation = 'relu', units=512, kernel_initializer= 'uniform'))
+    classifier.add(Dense(activation = 'relu', units=256, kernel_initializer= 'uniform'))
+    classifier.add(Dense(activation = 'relu', units=128, kernel_initializer= 'uniform'))
+
+    classifier.add(Dense(activation = 'sigmoid', units=1, kernel_initializer = 'uniform'))
+
+    #create optimizer with default learning rate
+
+
+    classifier.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+
+    classifier.summary()
+
+    Model: "sequential"
+
+    ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━┓
+    ┃ Layer (type)                    ┃ Output Shape           ┃       Param # ┃
+    ┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━┩
+    │ dense (Dense)                   │ (None, 256)            │         3,072 │
+    ├─────────────────────────────────┼────────────────────────┼───────────────┤
+    │ dense_1 (Dense)                 │ (None, 512)            │       131,584 │
+    ├─────────────────────────────────┼────────────────────────┼───────────────┤
+    │ dense_2 (Dense)                 │ (None, 256)            │       131,328 │
+    ├─────────────────────────────────┼────────────────────────┼───────────────┤
+    │ dense_3 (Dense)                 │ (None, 128)            │        32,896 │
+    ├─────────────────────────────────┼────────────────────────┼───────────────┤
+    │ dense_4 (Dense)                 │ (None, 1)              │           129 │
+    └─────────────────────────────────┴────────────────────────┴───────────────┘
+
+     Total params: 299,009 (1.14 MB)
+
+     Trainable params: 299,009 (1.14 MB)
+
+     Non-trainable params: 0 (0.00 B)
+
+    classifier.fit(
+        X_train, y_train,
+        validation_data = (X_test, y_test),
+        epochs=20,
+        batch_size=32
+    )
+
+    Epoch 1/20
+    250/250 ━━━━━━━━━━━━━━━━━━━━ 4s 9ms/step - accuracy: 0.7899 - loss: 0.4797 - val_accuracy: 0.8570 - val_loss: 0.3639
+    Epoch 2/20
+    250/250 ━━━━━━━━━━━━━━━━━━━━ 2s 10ms/step - accuracy: 0.8536 - loss: 0.3637 - val_accuracy: 0.8605 - val_loss: 0.3423
+    Epoch 3/20
+    250/250 ━━━━━━━━━━━━━━━━━━━━ 3s 13ms/step - accuracy: 0.8611 - loss: 0.3380 - val_accuracy: 0.8530 - val_loss: 0.3652
+    Epoch 4/20
+    250/250 ━━━━━━━━━━━━━━━━━━━━ 2s 8ms/step - accuracy: 0.8539 - loss: 0.3560 - val_accuracy: 0.8615 - val_loss: 0.3399
+    Epoch 5/20
+    250/250 ━━━━━━━━━━━━━━━━━━━━ 2s 8ms/step - accuracy: 0.8682 - loss: 0.3291 - val_accuracy: 0.8535 - val_loss: 0.3491
+    Epoch 6/20
+    250/250 ━━━━━━━━━━━━━━━━━━━━ 2s 9ms/step - accuracy: 0.8647 - loss: 0.3374 - val_accuracy: 0.8590 - val_loss: 0.3406
+    Epoch 7/20
+    250/250 ━━━━━━━━━━━━━━━━━━━━ 3s 10ms/step - accuracy: 0.8706 - loss: 0.3259 - val_accuracy: 0.8650 - val_loss: 0.3360
+    Epoch 8/20
+    250/250 ━━━━━━━━━━━━━━━━━━━━ 5s 19ms/step - accuracy: 0.8742 - loss: 0.3161 - val_accuracy: 0.8600 - val_loss: 0.3428
+    Epoch 9/20
+    250/250 ━━━━━━━━━━━━━━━━━━━━ 3s 12ms/step - accuracy: 0.8666 - loss: 0.3275 - val_accuracy: 0.8605 - val_loss: 0.3460
+    Epoch 10/20
+    250/250 ━━━━━━━━━━━━━━━━━━━━ 7s 18ms/step - accuracy: 0.8715 - loss: 0.3217 - val_accuracy: 0.8545 - val_loss: 0.3729
+    Epoch 11/20
+    250/250 ━━━━━━━━━━━━━━━━━━━━ 3s 9ms/step - accuracy: 0.8760 - loss: 0.3151 - val_accuracy: 0.8620 - val_loss: 0.3433
+    Epoch 12/20
+    250/250 ━━━━━━━━━━━━━━━━━━━━ 3s 12ms/step - accuracy: 0.8720 - loss: 0.3103 - val_accuracy: 0.8580 - val_loss: 0.3485
+    Epoch 13/20
+    250/250 ━━━━━━━━━━━━━━━━━━━━ 2s 8ms/step - accuracy: 0.8719 - loss: 0.3200 - val_accuracy: 0.8585 - val_loss: 0.3432
+    Epoch 14/20
+    250/250 ━━━━━━━━━━━━━━━━━━━━ 2s 9ms/step - accuracy: 0.8779 - loss: 0.3006 - val_accuracy: 0.8505 - val_loss: 0.3459
+    Epoch 15/20
+    250/250 ━━━━━━━━━━━━━━━━━━━━ 4s 14ms/step - accuracy: 0.8757 - loss: 0.3063 - val_accuracy: 0.8525 - val_loss: 0.3613
+    Epoch 16/20
+    250/250 ━━━━━━━━━━━━━━━━━━━━ 2s 9ms/step - accuracy: 0.8731 - loss: 0.3041 - val_accuracy: 0.8565 - val_loss: 0.3492
+    Epoch 17/20
+    250/250 ━━━━━━━━━━━━━━━━━━━━ 2s 8ms/step - accuracy: 0.8839 - loss: 0.2821 - val_accuracy: 0.8615 - val_loss: 0.3516
+    Epoch 18/20
+    250/250 ━━━━━━━━━━━━━━━━━━━━ 2s 10ms/step - accuracy: 0.8839 - loss: 0.2891 - val_accuracy: 0.8510 - val_loss: 0.3773
+    Epoch 19/20
+    250/250 ━━━━━━━━━━━━━━━━━━━━ 2s 8ms/step - accuracy: 0.8822 - loss: 0.2802 - val_accuracy: 0.8515 - val_loss: 0.3668
+    Epoch 20/20
+    250/250 ━━━━━━━━━━━━━━━━━━━━ 3s 12ms/step - accuracy: 0.8914 - loss: 0.2676 - val_accuracy: 0.8545 - val_loss: 0.3703
+
+    <keras.src.callbacks.history.History at 0x78e1f4123d10>
+
+    y_pred = classifier.predict(X_test)
+    y_pred
+
+    63/63 ━━━━━━━━━━━━━━━━━━━━ 0s 6ms/step
+
+    array([[0.27106857],
+           [0.1583081 ],
+           [0.02630524],
+           ...,
+           [0.03115013],
+           [0.17928968],
+           [0.15129311]], dtype=float32)
+
+    y_pred = (y_pred > 0.5)
+    y_pred
+
+    array([[False],
+           [False],
+           [False],
+           ...,
+           [False],
+           [False],
+           [False]])
+
+    from sklearn.metrics import confusion_matrix, classification_report
+
+    cm1 = confusion_matrix(y_test, y_pred)
+    cm1
+
+    array([[1509,   86],
+           [ 205,  200]])
+
+    print(classification_report(y_test, y_pred))
+
+                  precision    recall  f1-score   support
+
+               0       0.88      0.95      0.91      1595
+               1       0.70      0.49      0.58       405
+
+        accuracy                           0.85      2000
+       macro avg       0.79      0.72      0.75      2000
+    weighted avg       0.84      0.85      0.84      2000
+
+    accuracy_model1 = ((cm1[0][0] + cm1[1][1]) *100)/(cm1[0][0]+cm1[1][1] + cm1[0][1] + cm1[1][0])
+    print(accuracy_model1, '% of testing data was classified correctly')
+
+    85.45 % of testing data was classified correctly
