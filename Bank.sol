@@ -1,46 +1,36 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-/*
- * Title: Bank Account Smart Contract
- * Aim: To perform basic banking operations - Deposit, Withdraw, and Check Balance
- * Description:
- * This contract allows users to deposit and withdraw Ether securely.
- * Each user has their own balance, and only they can withdraw their funds.
- */
+contract SimpleBank {
+    address public owner;
+    mapping(address => uint256) private balances;
 
-contract Bank {
+    event Deposited(address indexed account, uint256 amount);
+    event Withdrawn(address indexed account, uint256 amount);
 
-    // Mapping to store balances of each user
-    mapping(address => uint256) public balanceOf;
-
-    // Event logs
-    event Deposit(address indexed account, uint256 amount);
-    event Withdrawal(address indexed account, uint256 amount);
-
-    // Deposit money into the bank
-    function deposit() public payable {
-        require(msg.value > 0, "Deposit amount must be greater than zero");
-        balanceOf[msg.sender] += msg.value;
-        emit Deposit(msg.sender, msg.value);
+    constructor() {
+        owner = msg.sender;
     }
 
-    // Withdraw money from the bank
-    function withdraw(uint256 amount) public {
-        require(amount > 0, "Withdrawal amount must be greater than zero");
-        require(amount <= balanceOf[msg.sender], "Insufficient balance");
-
-        // Update balance first (Checks-Effects-Interactions pattern)
-        balanceOf[msg.sender] -= amount;
-
-        // Transfer the requested amount to sender
-        payable(msg.sender).transfer(amount);
-
-        emit Withdrawal(msg.sender, amount);
+    // Deposit funds into sender's account
+    function deposit() external payable {
+        require(msg.value > 0, "Must send some ETH");
+        balances[msg.sender] += msg.value;
+        emit Deposited(msg.sender, msg.value);
     }
 
-    // View the balance of caller
-    function getBalance() public view returns (uint256) {
-        return balanceOf[msg.sender];
+    // Withdraw up to the caller's balance
+    function withdraw(uint256 amountWei) external {
+        require(amountWei > 0, "Amount must be > 0");
+        require(balances[msg.sender] >= amountWei, "Insufficient balance");
+        balances[msg.sender] -= amountWei;
+        payable(msg.sender).transfer(amountWei);
+        emit Withdrawn(msg.sender, amountWei);
     }
+
+    // View the caller's balance (in wei)
+    function getMyBalance() external view returns (uint256) {
+        return balances[msg.sender];
+    }
+
 }
